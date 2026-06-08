@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
 export default function CTASection() {
@@ -65,15 +66,13 @@ export default function CTASection() {
 
           {/* Action buttons */}
           <div className="flex flex-wrap gap-3 justify-center">
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/upload"
               className="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 bg-btn-primary text-bg-base hover:bg-btn-primary-hover transition-colors rounded-md"
             >
-              View on GitHub
+              Start Free Review
               <ArrowRight className="w-4 h-4" />
-            </a>
+            </Link>
             <a
               href="#pipeline"
               className="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong transition-colors rounded-md"

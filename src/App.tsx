@@ -1,35 +1,20 @@
-import {
-  Navbar,
-  HeroSection,
-  PipelineSection,
-  RiskTableSection,
-  CoverageSection,
-  LedgerSection,
-  CTASection,
-  Footer,
-} from './components/sections';
-import SectionDivider from './components/ui/SectionDivider';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
+import UploadPage from './pages/UploadPage';
+import ReviewPage from './pages/ReviewPage';
+import ResultsPage from './pages/ResultsPage';
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-bg-base text-text-primary">
-      <Navbar />
-
-      <main>
-        <HeroSection />
-        <SectionDivider />
-        <PipelineSection />
-        <SectionDivider />
-        <RiskTableSection />
-        <SectionDivider />
-        <CoverageSection />
-        <SectionDivider />
-        <LedgerSection />
-        <SectionDivider />
-        <CTASection />
-      </main>
-
-      <Footer />
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen bg-bg-base text-text-primary">
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/review" element={<ReviewPage />} />
+          <Route path="/results" element={<ResultsPage />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   );
 }

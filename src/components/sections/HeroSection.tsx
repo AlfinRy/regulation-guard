@@ -1,4 +1,5 @@
 import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function HeroSection() {
   return (
@@ -17,13 +18,13 @@ export default function HeroSection() {
               Deploy 4 specialized AI agents to audit your legal standing against GDPR, OJK, PDPA, and ISO 27001. Document ingestion to risk mitigation, automated.
             </p>
             <div className="flex flex-wrap gap-3 mt-2">
-              <a
-                href="#cta"
+              <Link
+                to="/upload"
                 className="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 bg-btn-primary text-bg-base hover:bg-btn-primary-hover transition-colors rounded-md"
               >
                 Start Free Review
                 <ArrowRight className="w-4 h-4" />
-              </a>
+              </Link>
               <a
                 href="#pipeline"
                 className="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong transition-colors rounded-md"
