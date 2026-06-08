@@ -136,8 +136,8 @@ export const PROVIDERS: ProviderConfig[] = [
     logo: '🔮',
     icon: 'zai.svg',
     baseUrl: 'https://api.z.ai/api/coding/paas/v4',
-    defaultModel: 'glm-4',
-    modelHint: 'glm-4',
+    defaultModel: 'glm-4.7',
+    modelHint: 'glm-4.7',
     docsUrl: 'https://docs.z.ai/guides/overview/quick-start',
   },
 ];

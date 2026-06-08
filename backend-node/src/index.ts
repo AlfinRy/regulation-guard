@@ -1,3 +1,4 @@
+import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
@@ -30,9 +31,10 @@ app.notFound((c) => {
 
 // Start server
 const PORT = parseInt(process.env.PORT || '3001', 10);
-console.log(`[regulation-guard] Node.js backend starting on port ${PORT}`);
 
-export default {
-  port: PORT,
+serve({
   fetch: app.fetch,
-};
+  port: PORT,
+}, (info) => {
+  console.log(`[regulation-guard] Node.js backend running on http://localhost:${info.port}`);
+});

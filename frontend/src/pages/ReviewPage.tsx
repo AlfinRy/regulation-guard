@@ -1,140 +1,209 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Shield, BookOpen, FileText, Lock, CheckCircle, ArrowRight } from 'lucide-react';
+import { Shield, BookOpen, FileText, Lock, CheckCircle, ArrowRight, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { streamReviewEvents, getReviewResult } from '../lib/api';
+import type { SSEEvent, ReviewResult } from '../lib/api';
 
 interface AgentStep {
   id: string;
   icon: typeof BookOpen;
   name: string;
   label: string;
-  status: 'queued' | 'running' | 'complete';
+  status: 'queued' | 'running' | 'complete' | 'error';
   progress: number;
-  messages: BandMessage[];
 }
 
-interface BandMessage {
+interface ClauseItem {
   id: string;
-  agent: string;
-  type: string;
-  content: string;
-  timestamp: string;
+  category: string;
+  text: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
-const SAMPLE_CLAUSES = [
-  { id: 'CL_001', category: 'Payment', text: 'Payment terms: Net 30 days from invoice receipt.', severity: 'LOW' },
-  { id: 'CL_002', category: 'Data', text: 'Vendor shall retain customer data for a period of 24 months post-termination.', severity: 'HIGH' },
-  { id: 'CL_003', category: 'Liability', text: 'Total liability capped at 1x annual service fee.', severity: 'HIGH' },
-  { id: 'CL_004', category: 'IP', text: 'All intellectual property developed during the engagement belongs to the client.', severity: 'LOW' },
-  { id: 'CL_005', category: 'Termination', text: 'Either party may terminate with 30 days written notice.', severity: 'MEDIUM' },
-  { id: 'CL_006', category: 'Subprocessor', text: 'Vendor may engage subprocessors without prior written consent.', severity: 'HIGH' },
-  { id: 'CL_007', category: 'Data', text: 'Data breach notification within 72 hours of discovery.', severity: 'LOW' },
-  { id: 'CL_008', category: 'Audit', text: 'Client reserves the right to audit vendor compliance annually.', severity: 'LOW' },
+const AGENT_MAP: Record<string, { label: string; color: string }> = {
+  AGENT_01: { label: 'Policy Reader', color: 'text-accent-blue' },
+  AGENT_02: { label: 'Risk Analyzer', color: 'text-accent-cyan' },
+  AGENT_03: { label: 'Legal Cross-Checker', color: 'text-accent-orange' },
+  AGENT_04: { label: 'Compliance Reporter', color: 'text-accent-emerald' },
+  SYSTEM: { label: 'System', color: 'text-text-tertiary' },
+};
+
+const AGENT_STEPS: AgentStep[] = [
+  { id: 'AGENT_01', icon: BookOpen, name: 'Policy Reader', label: 'AGENT_01', status: 'queued', progress: 0 },
+  { id: 'AGENT_02', icon: FileText, name: 'Risk Analyzer', label: 'AGENT_02', status: 'queued', progress: 0 },
+  { id: 'AGENT_03', icon: Lock, name: 'Legal Cross-Checker', label: 'AGENT_03', status: 'queued', progress: 0 },
+  { id: 'AGENT_04', icon: CheckCircle, name: 'Compliance Reporter', label: 'AGENT_04', status: 'queued', progress: 0 },
 ];
 
-const BAND_MESSAGES: BandMessage[] = [
-  { id: '1', agent: 'AGENT_01', type: 'clause_extraction_result', content: 'Initializing document parser. Detected 8 major clauses across 6 categories.', timestamp: '00:01' },
-  { id: '2', agent: 'AGENT_01', type: 'clause_extraction_result', content: 'Extraction complete. Structured JSON with 8 clauses, metadata fingerprinted.', timestamp: '00:14' },
-  { id: '3', agent: 'AGENT_01', type: 'handoff', content: 'HANDOFF → AGENT_02: Forwarding clause_extraction_result (8 items, 0 parse errors).', timestamp: '00:15' },
-  { id: '4', agent: 'AGENT_02', type: 'risk_analysis_result', content: 'Risk analysis started. Running taxonomy match against 450+ risk patterns.', timestamp: '00:16' },
-  { id: '5', agent: 'AGENT_02', type: 'risk_analysis_result', content: 'CL_002 flagged: Data retention exceeds regulatory maximum. Severity: HIGH.', timestamp: '00:28' },
-  { id: '6', agent: 'AGENT_02', type: 'risk_analysis_result', content: 'CL_003 flagged: Liability cap insufficient for data breach scenarios per OJK.', timestamp: '00:31' },
-  { id: '7', agent: 'AGENT_02', type: 'risk_analysis_result', content: 'CL_006 flagged: Subprocessor consent clause absent. GDPR Art. 28(2) risk.', timestamp: '00:35' },
-  { id: '8', agent: 'AGENT_02', type: 'handoff', content: 'HANDOFF → AGENT_03: Forwarding risk_analysis_result (3 HIGH, 1 MEDIUM, 4 LOW).', timestamp: '00:36' },
-  { id: '9', agent: 'AGENT_03', type: 'legal_crosscheck_result', content: 'Cross-referencing CL_002, CL_003, CL_006 against GDPR, OJK POJK 12/2018.', timestamp: '00:37' },
-  { id: '10', agent: 'AGENT_03', type: 'legal_crosscheck_result', content: 'CL_002: GDPR Art. 5(1)(e) violation confirmed. No deletion timeline specified.', timestamp: '00:52' },
-  { id: '11', agent: 'AGENT_03', type: 'legal_crosscheck_result', content: 'CL_003: OJK POJK 38/2020 — liability floor for data incidents exceeds cap.', timestamp: '00:58' },
-  { id: '12', agent: 'AGENT_03', type: 'legal_crosscheck_result', content: 'CL_006: GDPR Art. 28(2) — prior written consent for subprocessors required.', timestamp: '01:04' },
-  { id: '13', agent: 'AGENT_03', type: 'handoff', content: 'HANDOFF → AGENT_04: Forwarding legal_crosscheck_result (3 confirmed violations).', timestamp: '01:05' },
-  { id: '14', agent: 'AGENT_04', type: 'final_report', content: 'Compliance report generation started. Assembling executive summary.', timestamp: '01:06' },
-  { id: '15', agent: 'AGENT_04', type: 'final_report', content: 'Risk matrix constructed. Clause-by-clause analysis attached.', timestamp: '01:18' },
-  { id: '16', agent: 'AGENT_04', type: 'final_report', content: 'Final report ready. 3 critical, 1 medium, 4 low findings. Recommendation: DO NOT SIGN without amendments.', timestamp: '01:24' },
-];
+function getAgentProgress(events: SSEEvent[]): AgentStep[] {
+  const steps = AGENT_STEPS.map(s => ({ ...s }));
+
+  for (const event of events) {
+    const agentIdx = steps.findIndex(s => s.id === event.agent);
+    if (agentIdx === -1) continue;
+
+    const step = steps[agentIdx];
+
+    if (event.type === 'handoff') {
+      // Current agent complete
+      step.status = 'complete';
+      step.progress = 100;
+      // Next agent starts
+      if (agentIdx + 1 < steps.length) {
+        steps[agentIdx + 1].status = 'running';
+        steps[agentIdx + 1].progress = 10;
+      }
+    } else if (event.type === 'complete' || event.type === 'error') {
+      step.status = event.type === 'complete' ? 'complete' : 'error';
+      step.progress = event.type === 'complete' ? 100 : step.progress;
+    } else {
+      // Regular message — mark agent as running
+      if (step.status === 'queued') {
+        step.status = 'running';
+        step.progress = 10;
+      }
+      // Incremental progress
+      if (step.status === 'running' && step.progress < 90) {
+        step.progress = Math.min(90, step.progress + 15);
+      }
+    }
+  }
+
+  return steps;
+}
+
+function extractClausesFromEvents(events: SSEEvent[]): ClauseItem[] {
+  const clauses: ClauseItem[] = [];
+
+  for (const event of events) {
+    if (event.agent === 'AGENT_01' && event.type === 'clause_extraction_result') {
+      // Try to extract clause count from message
+      const match = event.content.match(/(\d+)\s+clause/i);
+      if (match) {
+        const count = parseInt(match[1], 10);
+        const categories = ['Data', 'Liability', 'Payment', 'IP', 'Termination', 'Subprocessor', 'Audit', 'Confidentiality'];
+        const severities: ClauseItem['severity'][] = ['HIGH', 'MEDIUM', 'LOW'];
+
+        // Generate placeholder clauses — real data comes from the final report
+        for (let i = 0; i < count; i++) {
+          clauses.push({
+            id: `CL_${String(i + 1).padStart(3, '0')}`,
+            category: categories[i % categories.length],
+            text: `Clause ${i + 1} extracted. Details available in the final report.`,
+            severity: severities[i % 3],
+          });
+        }
+      }
+    }
+  }
+
+  return clauses;
+}
 
 export default function ReviewPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const feedRef = useRef<HTMLDivElement>(null);
 
-  const state = location.state as { fileName?: string; regulations?: string[] } | null;
+  const state = location.state as { sessionId?: string; fileName?: string; regulations?: string[] } | null;
+  const sessionId = state?.sessionId || '';
   const fileName = state?.fileName || 'document.pdf';
-  const regulations = state?.regulations || ['gdpr', 'ojk'];
+  const regulations = state?.regulations || [];
 
-  const [agents, setAgents] = useState<AgentStep[]>([
-    { id: 'agent_01', icon: BookOpen, name: 'Policy Reader', label: 'AGENT_01', status: 'queued', progress: 0, messages: [] },
-    { id: 'agent_02', icon: FileText, name: 'Risk Analyzer', label: 'AGENT_02', status: 'queued', progress: 0, messages: [] },
-    { id: 'agent_03', icon: Lock, name: 'Legal Cross-Checker', label: 'AGENT_03', status: 'queued', progress: 0, messages: [] },
-    { id: 'agent_04', icon: CheckCircle, name: 'Compliance Reporter', label: 'AGENT_04', status: 'queued', progress: 0, messages: [] },
-  ]);
-
-  const [visibleMessages, setVisibleMessages] = useState<BandMessage[]>([]);
-  const [visibleClauses, setVisibleClauses] = useState<typeof SAMPLE_CLAUSES>([]);
-  const [currentAgentIdx, setCurrentAgentIdx] = useState(0);
+  const [events, setEvents] = useState<SSEEvent[]>([]);
+  const [agents, setAgents] = useState<AgentStep[]>(AGENT_STEPS);
+  const [clauses, setClauses] = useState<ClauseItem[]>([]);
   const [allDone, setAllDone] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<ReviewResult | null>(null);
 
-  // Simulate the agent pipeline
+  // Subscribe to SSE stream
   useEffect(() => {
-    let msgIdx = 0;
-    const agentBoundaries = [3, 8, 13, 16]; // index in BAND_MESSAGES where each agent completes
+    if (!sessionId) {
+      setError('No session ID. Start a review from the Upload page.');
+      return;
+    }
 
-    const interval = setInterval(() => {
-      if (msgIdx >= BAND_MESSAGES.length) {
-        clearInterval(interval);
-        setAllDone(true);
-        return;
-      }
+    let cancelled = false;
 
-      const msg = BAND_MESSAGES[msgIdx];
+    async function subscribe() {
+      try {
+        for await (const event of streamReviewEvents(sessionId)) {
+          if (cancelled) break;
 
-      // Determine which agent is active
-      let agentIdx = 0;
-      if (msgIdx <= 3) agentIdx = 0;
-      else if (msgIdx <= 8) agentIdx = 1;
-      else if (msgIdx <= 13) agentIdx = 2;
-      else agentIdx = 3;
+          setEvents(prev => [...prev, event]);
 
-      setCurrentAgentIdx(agentIdx);
+          // Update agent progress
+          setEvents(current => {
+            setAgents(getAgentProgress(current));
+            return current;
+          });
 
-      setVisibleMessages(prev => [...prev, msg]);
+          // Extract clauses
+          setEvents(current => {
+            setClauses(extractClausesFromEvents(current));
+            return current;
+          });
 
-      // Update agent statuses
-      setAgents(prev => prev.map((a, i) => {
-        if (i < agentIdx) return { ...a, status: 'complete', progress: 100 };
-        if (i === agentIdx) {
-          const boundary = agentBoundaries[i] || BAND_MESSAGES.length;
-          const start = i === 0 ? 0 : agentBoundaries[i - 1];
-          const progress = Math.min(100, Math.round(((msgIdx - start) / (boundary - start)) * 100));
-          return { ...a, status: 'running', progress, messages: [...a.messages, msg] };
+          if (event.type === 'complete') {
+            setAllDone(true);
+
+            // Fetch the final result
+            try {
+              const res = await getReviewResult(sessionId);
+              setResult(res);
+            } catch {
+              // Result might not be ready yet
+            }
+          }
+
+          if (event.type === 'error') {
+            setError(event.content);
+          }
         }
-        return a;
-      }));
-
-      // Reveal clauses after agent 1 starts
-      if (msgIdx === 1) {
-        // Reveal clauses one by one
-        SAMPLE_CLAUSES.forEach((clause, ci) => {
-          setTimeout(() => {
-            setVisibleClauses(prev => [...prev, clause]);
-          }, ci * 200);
-        });
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Stream connection failed.');
+        }
       }
+    }
 
-      msgIdx++;
-    }, 800);
+    subscribe();
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => { cancelled = true; };
+  }, [sessionId]);
 
   // Auto-scroll feed
   useEffect(() => {
     if (feedRef.current) {
       feedRef.current.scrollTop = feedRef.current.scrollHeight;
     }
-  }, [visibleMessages]);
+  }, [events]);
 
-  const overallProgress = Math.round(
-    agents.reduce((sum, a) => sum + a.progress, 0) / agents.length
-  );
+  const overallProgress = Math.round(agents.reduce((sum, a) => sum + a.progress, 0) / agents.length);
+
+  // If no session, show error state
+  if (!sessionId) {
+    return (
+      <div className="min-h-screen bg-bg-base flex items-center justify-center">
+        <div className="max-w-md text-center p-8">
+          <AlertTriangle className="w-10 h-10 text-accent-amber mx-auto mb-4" />
+          <h2 className="text-subheading mb-2">No Active Review</h2>
+          <p className="text-sm text-text-secondary mb-4">
+            {error || 'Start a review from the Upload page to see live agent activity.'}
+          </p>
+          <button
+            onClick={() => navigate('/upload')}
+            className="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 bg-btn-primary text-bg-base hover:bg-btn-primary-hover rounded-md"
+          >
+            Go to Upload
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bg-base">
@@ -165,18 +234,20 @@ export default function ReviewPage() {
               <span className="h-px bg-border-subtle w-8" />
               <span className="text-text-secondary">02</span>
               <span className="h-px flex-1 bg-border-subtle" />
-              <span className="text-text-tertiary">03</span>
+              <span className={allDone ? 'text-accent-emerald' : 'text-text-tertiary'}>03</span>
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-subheading">Live Review</h1>
-                <p className="text-xs text-text-tertiary font-mono mt-1">{fileName} · {regulations.length} regulation{regulations.length > 1 ? 's' : ''}</p>
+                <p className="text-xs text-text-tertiary font-mono mt-1">
+                  {fileName} · {regulations.length} regulation{regulations.length > 1 ? 's' : ''} · {sessionId.slice(0, 12)}
+                </p>
               </div>
               {allDone && (
                 <motion.button
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  onClick={() => navigate('/results', { state: { fileName, regulations } })}
+                  onClick={() => navigate('/results', { state: { sessionId, fileName, regulations, result } })}
                   className="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 bg-btn-primary text-bg-base hover:bg-btn-primary-hover transition-colors rounded-md"
                 >
                   View Results
@@ -197,6 +268,7 @@ export default function ReviewPage() {
                       <Icon className={`w-3.5 h-3.5 ${
                         agent.status === 'complete' ? 'text-accent-emerald' :
                         agent.status === 'running' ? 'text-accent-cyan' :
+                        agent.status === 'error' ? 'text-accent-red' :
                         'text-text-muted'
                       }`} />
                       <span className={`font-mono text-xs ${
@@ -212,11 +284,15 @@ export default function ReviewPage() {
                       {agent.status === 'complete' && (
                         <CheckCircle className="w-3 h-3 text-accent-emerald" />
                       )}
+                      {agent.status === 'error' && (
+                        <AlertTriangle className="w-3 h-3 text-accent-red" />
+                      )}
                     </div>
                     <div className="h-1 bg-bg-surface-4 w-full">
                       <motion.div
                         className={`h-full ${
                           agent.status === 'complete' ? 'bg-accent-emerald' :
+                          agent.status === 'error' ? 'bg-accent-red' :
                           agent.status === 'running' ? 'bg-accent-cyan' :
                           'bg-transparent'
                         }`}
@@ -231,6 +307,14 @@ export default function ReviewPage() {
             </div>
           </div>
 
+          {/* Error banner */}
+          {error && (
+            <div className="border-b border-accent-red/30 bg-accent-red/5 px-8 py-3 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-accent-red flex-shrink-0" />
+              <span className="text-sm text-accent-red">{error}</span>
+            </div>
+          )}
+
           {/* Main content: Band Feed + Clause List */}
           <div className="grid lg:grid-cols-5 grid-cols-1">
             {/* Band Agent Feed */}
@@ -240,7 +324,7 @@ export default function ReviewPage() {
                   BAND_ROOM — live agent feed
                 </span>
                 <span className="font-mono text-xs text-accent-cyan">
-                  {visibleMessages.length} messages
+                  {events.length} messages
                 </span>
               </div>
               <div
@@ -248,45 +332,52 @@ export default function ReviewPage() {
                 className="h-[500px] overflow-y-auto p-4 space-y-2 font-mono text-code"
               >
                 <AnimatePresence>
-                  {visibleMessages.map((msg) => (
+                  {events.map((event) => (
                     <motion.div
-                      key={msg.id}
+                      key={event.id || event.timestamp}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.2 }}
                       className={`p-3 border border-border-subtle bg-bg-surface-2 ${
-                        msg.type === 'handoff' ? 'border-l-2 border-l-accent-amber' :
-                        msg.type === 'final_report' ? 'border-l-2 border-l-accent-emerald' :
+                        event.type === 'handoff' ? 'border-l-2 border-l-accent-amber' :
+                        event.type === 'final_report' ? 'border-l-2 border-l-accent-emerald' :
+                        event.type === 'error' ? 'border-l-2 border-l-accent-red' :
                         ''
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`text-xs ${
-                          msg.agent === 'AGENT_01' ? 'text-accent-blue' :
-                          msg.agent === 'AGENT_02' ? 'text-accent-cyan' :
-                          msg.agent === 'AGENT_03' ? 'text-accent-orange' :
-                          'text-accent-emerald'
+                          (AGENT_MAP[event.agent]?.color || 'text-text-tertiary')
                         }`}>
-                          {msg.agent}
+                          {event.agent}
                         </span>
-                        <span className="text-xs text-text-muted">{msg.timestamp}</span>
+                        <span className="text-xs text-text-muted">{event.timestamp}</span>
                         <span className="text-[10px] text-text-muted ml-auto">
-                          {msg.type}
+                          {event.type}
                         </span>
                       </div>
                       <p className="text-xs text-text-secondary leading-relaxed">
-                        {msg.content}
+                        {event.content}
                       </p>
                     </motion.div>
                   ))}
                 </AnimatePresence>
 
-                {!allDone && (
+                {!allDone && !error && events.length > 0 && (
                   <div className="flex items-center gap-2 p-3 text-text-muted">
                     <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
                     <span className="text-xs">
-                      {agents[currentAgentIdx]?.label} processing...
+                      {agents.find(a => a.status === 'running')?.label || 'Processing'}...
                     </span>
+                  </div>
+                )}
+
+                {events.length === 0 && !error && (
+                  <div className="flex items-center justify-center h-full text-text-muted">
+                    <div className="text-center">
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse inline-block mb-3" />
+                      <p className="text-xs">Connecting to pipeline...</p>
+                    </div>
                   </div>
                 )}
 
@@ -311,16 +402,17 @@ export default function ReviewPage() {
             <div className="lg:col-span-2">
               <div className="border-b border-border-subtle px-4 py-3 bg-bg-surface-2">
                 <span className="font-mono text-xs text-text-muted">
-                  EXTRACTED_CLAUSES — {visibleClauses.length} of {SAMPLE_CLAUSES.length}
+                  EXTRACTED_CLAUSES — {clauses.length} found
                 </span>
               </div>
               <div className="h-[500px] overflow-y-auto">
                 <AnimatePresence>
-                  {visibleClauses.map((clause) => (
+                  {clauses.map((clause, i) => (
                     <motion.div
                       key={clause.id}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
                       className="border-b border-border-subtle p-4 hover:bg-bg-surface-2/50 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -340,6 +432,12 @@ export default function ReviewPage() {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+
+                {clauses.length === 0 && (
+                  <div className="flex items-center justify-center h-32 text-text-muted text-xs font-mono">
+                    Waiting for Agent 1 to extract clauses...
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -12,6 +12,7 @@ import {
   getProviderConfig,
 } from '../lib/byok';
 import ProviderIcon from '../components/ui/ProviderIcon';
+import { validateKey } from '../lib/api';
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
@@ -44,39 +45,20 @@ export default function SettingsPage() {
   const handleTest = async () => {
     if (!apiKey || !provider) return;
 
+    // Save temporarily so the API client can read the headers
+    saveSettings(providerId, apiKey, modelName);
+
     setTestStatus('testing');
     setTestError('');
 
     try {
-      // TODO: Replace with actual backend call POST /api/validate-key
-      // For now, simulate a basic validation
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      const result = await validateKey();
 
-      // Simulated: check if key looks valid (starts with expected prefix)
-      const keyPrefixes: Record<string, string[]> = {
-        anthropic: ['sk-ant-'],
-        deepseek: ['sk-'],
-        openai: ['sk-'],
-        openrouter: ['sk-'],
-        groq: ['gsk_'],
-        mistral: [''],
-        together: [''],
-        fireworks: [''],
-        gemini: ['AIza'],
-        xai: ['xai-'],
-        zai: [''],
-        ollama: [''],
-        'zai-coding': [''],
-      };
-
-      const validPrefixes = keyPrefixes[providerId] || [];
-      const hasValidPrefix = validPrefixes.length === 0 || validPrefixes.some(p => apiKey.startsWith(p));
-
-      if (hasValidPrefix && apiKey.length >= 8) {
+      if (result.valid) {
         setTestStatus('success');
       } else {
         setTestStatus('error');
-        setTestError('Key format mismatch. Please check your API key.');
+        setTestError(result.error || 'Invalid API key. Please check and try again.');
       }
     } catch {
       setTestStatus('error');

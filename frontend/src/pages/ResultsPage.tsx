@@ -1,126 +1,35 @@
 import { useLocation } from 'react-router-dom';
-import { Shield, Download, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, FileText } from 'lucide-react';
-import { useState } from 'react';
+import { Shield, Download, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, FileText, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getReviewResult } from '../lib/api';
+import type { ReviewResult, ReportFinding } from '../lib/api';
 
-interface ClauseFinding {
-  id: string;
-  clauseRef: string;
-  category: string;
-  text: string;
-  severity: 'CRITICAL' | 'MEDIUM' | 'LOW';
-  regulation: string;
-  article: string;
-  status: 'VIOLATION' | 'WARNING' | 'COMPLIANT';
-  reasoning: string;
-  confidence: number;
-  humanReview: boolean;
-}
-
-const FINDINGS: ClauseFinding[] = [
+// Fallback sample data when no real report is available
+const SAMPLE_FINDINGS: ReportFinding[] = [
   {
-    id: '1',
-    clauseRef: 'CL_002',
-    category: 'Data Retention',
-    text: 'Vendor shall retain customer data for a period of 24 months post-termination.',
-    severity: 'CRITICAL',
-    regulation: 'GDPR',
-    article: 'Art. 5(1)(e)',
-    status: 'VIOLATION',
-    reasoning: 'No deletion timeline specified. GDPR requires data retention to be limited to what is necessary for the stated purpose. 24 months post-termination retention without justification violates the storage limitation principle.',
-    confidence: 96,
-    humanReview: true,
+    id: '1', clauseText: 'Vendor shall retain customer data for a period of 24 months post-termination.', category: 'Data Retention', severity: 'CRITICAL', status: 'VIOLATION', regulation: 'GDPR', article: 'Art. 5(1)(e)', reasoning: 'No deletion timeline specified. GDPR requires data retention to be limited to what is necessary for the stated purpose.', confidence: 96, humanReview: true,
   },
   {
-    id: '2',
-    clauseRef: 'CL_003',
-    category: 'Liability',
-    text: 'Total liability capped at 1x annual service fee.',
-    severity: 'CRITICAL',
-    regulation: 'OJK POJK 12/2018',
-    article: 'Art. 23',
-    status: 'VIOLATION',
-    reasoning: 'Liability cap of 1x annual fee is insufficient for data breach scenarios. OJK regulations require adequate financial provisions for data incident compensation, which typically exceed nominal annual fees.',
-    confidence: 94,
-    humanReview: true,
+    id: '2', clauseText: 'Total liability capped at 1x annual service fee.', category: 'Liability', severity: 'CRITICAL', status: 'VIOLATION', regulation: 'OJK POJK 12/2018', article: 'Art. 23', reasoning: 'Liability cap of 1x annual fee is insufficient for data breach scenarios per OJK regulations.', confidence: 94, humanReview: true,
   },
   {
-    id: '3',
-    clauseRef: 'CL_006',
-    category: 'Subprocessor',
-    text: 'Vendor may engage subprocessors without prior written consent.',
-    severity: 'CRITICAL',
-    regulation: 'GDPR',
-    article: 'Art. 28(2)',
-    status: 'VIOLATION',
-    reasoning: 'GDPR requires prior written authorization before engaging subprocessors. Current clause grants blanket permission, which is a direct violation of the data processing agreement requirements.',
-    confidence: 97,
-    humanReview: true,
+    id: '3', clauseText: 'Vendor may engage subprocessors without prior written consent.', category: 'Subprocessor', severity: 'CRITICAL', status: 'VIOLATION', regulation: 'GDPR', article: 'Art. 28(2)', reasoning: 'GDPR requires prior written authorization before engaging subprocessors.', confidence: 97, humanReview: true,
   },
   {
-    id: '4',
-    clauseRef: 'CL_005',
-    category: 'Termination',
-    text: 'Either party may terminate with 30 days written notice.',
-    severity: 'MEDIUM',
-    regulation: 'OJK POJK 38/2020',
-    article: 'Art. 15',
-    status: 'WARNING',
-    reasoning: '30-day termination notice may be insufficient for orderly data migration and deletion. Consider extending to 60 days with explicit data handling provisions for the transition period.',
-    confidence: 82,
-    humanReview: false,
+    id: '4', clauseText: 'Either party may terminate with 30 days written notice.', category: 'Termination', severity: 'MEDIUM', status: 'WARNING', regulation: 'OJK POJK 38/2020', article: 'Art. 15', reasoning: '30-day termination notice may be insufficient for orderly data migration and deletion.', confidence: 82, humanReview: false,
   },
   {
-    id: '5',
-    clauseRef: 'CL_001',
-    category: 'Payment',
-    text: 'Payment terms: Net 30 days from invoice receipt.',
-    severity: 'LOW',
-    regulation: 'General',
-    article: 'N/A',
-    status: 'COMPLIANT',
-    reasoning: 'Standard payment terms. No regulatory concerns identified.',
-    confidence: 99,
-    humanReview: false,
+    id: '5', clauseText: 'Payment terms: Net 30 days from invoice receipt.', category: 'Payment', severity: 'LOW', status: 'COMPLIANT', regulation: 'General', article: 'N/A', reasoning: 'Standard payment terms. No regulatory concerns identified.', confidence: 99, humanReview: false,
   },
   {
-    id: '6',
-    clauseRef: 'CL_004',
-    category: 'IP',
-    text: 'All intellectual property developed during the engagement belongs to the client.',
-    severity: 'LOW',
-    regulation: 'General',
-    article: 'N/A',
-    status: 'COMPLIANT',
-    reasoning: 'Standard IP assignment clause favorable to client. No regulatory concerns.',
-    confidence: 98,
-    humanReview: false,
+    id: '6', clauseText: 'All intellectual property developed during the engagement belongs to the client.', category: 'IP', severity: 'LOW', status: 'COMPLIANT', regulation: 'General', article: 'N/A', reasoning: 'Standard IP assignment clause favorable to client.', confidence: 98, humanReview: false,
   },
   {
-    id: '7',
-    clauseRef: 'CL_007',
-    category: 'Data Breach',
-    text: 'Data breach notification within 72 hours of discovery.',
-    severity: 'LOW',
-    regulation: 'GDPR',
-    article: 'Art. 33',
-    status: 'COMPLIANT',
-    reasoning: '72-hour notification window aligns with GDPR Article 33 requirements. Properly scoped.',
-    confidence: 99,
-    humanReview: false,
+    id: '7', clauseText: 'Data breach notification within 72 hours of discovery.', category: 'Data Breach', severity: 'LOW', status: 'COMPLIANT', regulation: 'GDPR', article: 'Art. 33', reasoning: '72-hour notification window aligns with GDPR Article 33 requirements.', confidence: 99, humanReview: false,
   },
   {
-    id: '8',
-    clauseRef: 'CL_008',
-    category: 'Audit',
-    text: 'Client reserves the right to audit vendor compliance annually.',
-    severity: 'LOW',
-    regulation: 'ISO 27001',
-    article: 'A.18.2.1',
-    status: 'COMPLIANT',
-    reasoning: 'Annual audit right is consistent with ISO 27001 A.18.2.1 requirements. Properly documented.',
-    confidence: 97,
-    humanReview: false,
+    id: '8', clauseText: 'Client reserves the right to audit vendor compliance annually.', category: 'Audit', severity: 'LOW', status: 'COMPLIANT', regulation: 'ISO 27001', article: 'A.18.2.1', reasoning: 'Annual audit right is consistent with ISO 27001 A.18.2.1 requirements.', confidence: 97, humanReview: false,
   },
 ];
 
@@ -133,21 +42,71 @@ const REGULATION_MAP: Record<string, string> = {
 
 export default function ResultsPage() {
   const location = useLocation();
-  const state = location.state as { fileName?: string; regulations?: string[] } | null;
+
+  const state = location.state as {
+    sessionId?: string;
+    fileName?: string;
+    regulations?: string[];
+    result?: ReviewResult;
+  } | null;
+
+  const sessionId = state?.sessionId || '';
   const fileName = state?.fileName || 'document.pdf';
   const regulations = state?.regulations || ['gdpr', 'ojk'];
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<'ALL' | 'CRITICAL' | 'MEDIUM' | 'LOW'>('ALL');
+  const [reportData, setReportData] = useState<ReviewResult | null>(state?.result || null);
+  const [loading, setLoading] = useState(!state?.result && !!sessionId);
+
+  // Fetch result from API if not passed via state
+  useEffect(() => {
+    if (!state?.result && sessionId) {
+      getReviewResult(sessionId)
+        .then(data => { setReportData(data); })
+        .catch(() => {})
+        .finally(() => { setLoading(false); });
+    }
+  }, [sessionId, state?.result]);
+
+  const report = reportData?.report;
+  const FINDINGS: ReportFinding[] = report?.findings || SAMPLE_FINDINGS;
 
   const critical = FINDINGS.filter(f => f.severity === 'CRITICAL').length;
   const medium = FINDINGS.filter(f => f.severity === 'MEDIUM').length;
   const low = FINDINGS.filter(f => f.severity === 'LOW').length;
+
+  const overallRisk = report?.overallRisk || (critical > 0 ? 'HIGH' : medium > 0 ? 'MEDIUM' : 'LOW');
+  const summary = report?.summary || 'Compliance review complete. See findings below for details.';
+  const recommendation = report?.recommendation || 'Review the findings and address critical issues before proceeding.';
 
   const filtered = filterSeverity === 'ALL'
     ? FINDINGS
     : FINDINGS.filter(f => f.severity === filterSeverity);
 
   const regLabels = regulations.map((r: string) => REGULATION_MAP[r] || r.toUpperCase()).join(', ');
+
+  const humanReviewCount = FINDINGS.filter(f => f.humanReview).length;
+
+  // Collect unique regulation citations from findings
+  const regCitations = FINDINGS.reduce<Record<string, string[]>>((acc, f) => {
+    const reg = f.regulation;
+    if (!acc[reg]) acc[reg] = [];
+    const cite = f.article !== 'N/A' ? `${f.article}` : '';
+    if (cite && !acc[reg].includes(cite)) acc[reg].push(cite);
+    return acc;
+  }, {});
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-bg-base flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-accent-cyan animate-spin mx-auto mb-4" />
+          <p className="text-sm text-text-secondary">Loading report...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bg-base">
@@ -204,7 +163,9 @@ export default function ResultsPage() {
               <div className="grid sm:grid-cols-4 grid-cols-2 gap-4 mb-6">
                 <div className="border border-border-subtle p-4">
                   <div className="font-mono text-xs text-text-muted mb-2">OVERALL_RISK</div>
-                  <div className="text-2xl font-semibold text-accent-red">HIGH</div>
+                  <div className={`text-2xl font-semibold ${
+                    overallRisk === 'HIGH' ? 'text-accent-red' : overallRisk === 'MEDIUM' ? 'text-accent-amber' : 'text-accent-emerald'
+                  }`}>{overallRisk}</div>
                 </div>
                 <div className="border border-border-subtle p-4">
                   <div className="font-mono text-xs text-text-muted mb-2">CRITICAL</div>
@@ -223,27 +184,38 @@ export default function ResultsPage() {
                 </div>
               </div>
 
+              {/* Summary text */}
+              <p className="text-sm text-text-secondary mb-4">{summary}</p>
+
               {/* Recommendation */}
-              <div className="border border-accent-red/30 bg-accent-red/5 p-4">
+              <div className={`border p-4 ${
+                overallRisk === 'HIGH' ? 'border-accent-red/30 bg-accent-red/5' :
+                overallRisk === 'MEDIUM' ? 'border-accent-amber/30 bg-accent-amber/5' :
+                'border-accent-emerald/30 bg-accent-emerald/5'
+              }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-4 h-4 text-accent-red" />
-                  <span className="text-sm font-medium text-accent-red">RECOMMENDATION</span>
+                  <AlertTriangle className={`w-4 h-4 ${
+                    overallRisk === 'HIGH' ? 'text-accent-red' : overallRisk === 'MEDIUM' ? 'text-accent-amber' : 'text-accent-emerald'
+                  }`} />
+                  <span className={`text-sm font-medium ${
+                    overallRisk === 'HIGH' ? 'text-accent-red' : overallRisk === 'MEDIUM' ? 'text-accent-amber' : 'text-accent-emerald'
+                  }`}>RECOMMENDATION</span>
                 </div>
-                <p className="text-sm text-text-secondary">
-                  Do not sign without amendments to CL_002 (Data Retention), CL_003 (Liability Cap), and CL_006 (Subprocessor Consent). These clauses contain confirmed regulatory violations.
-                </p>
+                <p className="text-sm text-text-secondary">{recommendation}</p>
               </div>
 
               {/* Human escalation */}
-              <div className="border border-accent-amber/30 bg-accent-amber/5 p-4 mt-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-4 h-4 text-accent-amber" />
-                  <span className="text-sm font-medium text-accent-amber">HUMAN_REVIEW_REQUIRED</span>
+              {humanReviewCount > 0 && (
+                <div className="border border-accent-amber/30 bg-accent-amber/5 p-4 mt-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-4 h-4 text-accent-amber" />
+                    <span className="text-sm font-medium text-accent-amber">HUMAN_REVIEW_REQUIRED</span>
+                  </div>
+                  <p className="text-sm text-text-secondary">
+                    {humanReviewCount} clause{humanReviewCount > 1 ? 's' : ''} flagged for human legal counsel review. Confidence levels are high but legal implications require professional sign-off.
+                  </p>
                 </div>
-                <p className="text-sm text-text-secondary">
-                  3 clauses flagged for human legal counsel review. Confidence levels are high but legal implications require professional sign-off.
-                </p>
-              </div>
+              )}
             </div>
           </div>
 
@@ -270,7 +242,7 @@ export default function ResultsPage() {
                 <tbody className="font-mono text-code">
                   {FINDINGS.map(f => (
                     <tr key={f.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-2/50 transition-colors">
-                      <td className="px-4 py-3 text-xs text-accent-blue">{f.clauseRef}</td>
+                      <td className="px-4 py-3 text-xs text-accent-blue">{f.id}</td>
                       <td className="px-4 py-3 text-sm text-text-secondary">{f.category}</td>
                       <td className="px-4 py-3">
                         <span className={`badge text-[10px] ${
@@ -347,7 +319,7 @@ export default function ResultsPage() {
                       }`} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="font-mono text-xs text-accent-blue">{finding.clauseRef}</span>
+                          <span className="font-mono text-xs text-accent-blue">{finding.id}</span>
                           <span className="font-mono text-xs text-text-muted">{finding.category}</span>
                           <span className={`badge text-[10px] ml-auto ${
                             finding.severity === 'CRITICAL' ? 'bg-accent-red/10 text-accent-red border-accent-red/20' :
@@ -360,7 +332,7 @@ export default function ResultsPage() {
                             <AlertTriangle className="w-3.5 h-3.5 text-accent-amber flex-shrink-0" />
                           )}
                         </div>
-                        <p className="text-xs text-text-secondary truncate">{finding.text}</p>
+                        <p className="text-xs text-text-secondary truncate">{finding.clauseText}</p>
                       </div>
                       {expandedId === finding.id ? (
                         <ChevronUp className="w-4 h-4 text-text-muted flex-shrink-0" />
@@ -382,7 +354,7 @@ export default function ResultsPage() {
                             <div className="grid sm:grid-cols-2 grid-cols-1 gap-4 mb-4">
                               <div>
                                 <div className="font-mono text-[10px] text-text-muted mb-1">CLAUSE_TEXT</div>
-                                <p className="text-sm text-text-secondary leading-relaxed">{finding.text}</p>
+                                <p className="text-sm text-text-secondary leading-relaxed">{finding.clauseText}</p>
                               </div>
                               <div>
                                 <div className="font-mono text-[10px] text-text-muted mb-1">CITATION</div>
@@ -422,19 +394,20 @@ export default function ResultsPage() {
             </div>
             <div className="p-8">
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {[
-                  { reg: 'GDPR', articles: ['Art. 5(1)(e) — Storage Limitation', 'Art. 28(2) — Processor Authorization', 'Art. 33 — Breach Notification'] },
-                  { reg: 'OJK POJK', articles: ['POJK 12/2018 Art. 23 — Liability', 'POJK 38/2020 Art. 15 — Termination'] },
-                ].map(ref => (
-                  <div key={ref.reg} className="border border-border-subtle p-4">
+                {Object.entries(regCitations).map(([reg, articles]) => (
+                  <div key={reg} className="border border-border-subtle p-4">
                     <div className="badge bg-accent-blue/10 text-accent-blue border-accent-blue/20 mb-3">
-                      {ref.reg}
+                      {reg}
                     </div>
-                    <ul className="space-y-2">
-                      {ref.articles.map((art, i) => (
-                        <li key={i} className="text-xs text-text-secondary font-mono">{art}</li>
-                      ))}
-                    </ul>
+                    {articles.length > 0 ? (
+                      <ul className="space-y-2">
+                        {articles.map((art, i) => (
+                          <li key={i} className="text-xs text-text-secondary font-mono">{art}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-text-tertiary">General reference</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -444,7 +417,7 @@ export default function ResultsPage() {
           {/* Footer */}
           <div className="px-8 py-6 flex items-center justify-between">
             <div className="font-mono text-xs text-text-muted">
-              Audit trail TXID: TXID_9885_CERT · 4/4 agents completed · Immutable
+              Session: {sessionId || 'demo'} · 4/4 agents completed · Immutable
             </div>
             <div className="font-mono text-xs text-text-tertiary">
               RegulationGuard v1.0

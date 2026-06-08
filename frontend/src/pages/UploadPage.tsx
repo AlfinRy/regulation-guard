@@ -4,6 +4,7 @@ import { Shield, Upload, FileText, ChevronRight, Check, X, Settings, AlertTriang
 import { motion, AnimatePresence } from 'framer-motion';
 import { hasSettings, getCurrentProvider, getStoredModelName } from '../lib/byok';
 import ProviderIcon from '../components/ui/ProviderIcon';
+import { startReview } from '../lib/api';
 
 const REGULATIONS = [
   { id: 'gdpr', code: 'GDPR', name: 'EU General Data Protection Regulation', disabled: false },
@@ -23,6 +24,9 @@ export default function UploadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [docName, setDocName] = useState('');
   const [isConfigured, setIsConfigured] = useState(hasSettings());
+
+  const [isStarting, setIsStarting] = useState(false);
+  const [startError, setStartError] = useState('');
 
   // Re-check settings on focus (user might have saved in settings tab)
   useEffect(() => {
@@ -55,13 +59,29 @@ export default function UploadPage() {
     );
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!isConfigured) {
       navigate('/settings');
       return;
     }
-    if (file && selectedRegs.length > 0) {
-      navigate('/review', { state: { fileName: file.name, regulations: selectedRegs } });
+    if (!file || selectedRegs.length === 0) return;
+
+    setIsStarting(true);
+    setStartError('');
+
+    try {
+      const result = await startReview(file, selectedRegs);
+      navigate('/review', {
+        state: {
+          sessionId: result.sessionId,
+          fileName: file.name,
+          regulations: selectedRegs,
+        },
+      });
+    } catch (err) {
+      setStartError(err instanceof Error ? err.message : 'Failed to start review.');
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -289,6 +309,9 @@ export default function UploadPage() {
               )}
             </div>
             <div className="flex items-center gap-3">
+              {startError && (
+                <span className="font-mono text-xs text-accent-red">{startError}</span>
+              )}
               {!isConfigured && (
                 <Link to="/settings" className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 border border-accent-amber/30 text-accent-amber hover:bg-accent-amber/5 transition-colors rounded-md">
                   <Settings className="w-4 h-4" />
@@ -296,18 +319,18 @@ export default function UploadPage() {
                 </Link>
               )}
               <button
-                disabled={!file || selectedRegs.length === 0}
+                disabled={!file || selectedRegs.length === 0 || isStarting}
                 onClick={handleStart}
                 className={`
                   inline-flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-md transition-all duration-200
-                  ${file && selectedRegs.length > 0
+                  ${file && selectedRegs.length > 0 && !isStarting
                     ? 'bg-btn-primary text-bg-base hover:bg-btn-primary-hover'
                     : 'bg-bg-surface-3 text-text-muted cursor-not-allowed'
                   }
                 `}
               >
-                Start Review
-                <ChevronRight className="w-4 h-4" />
+                {isStarting ? 'Starting...' : 'Start Review'}
+                {!isStarting && <ChevronRight className="w-4 h-4" />}
               </button>
             </div>
           </div>
