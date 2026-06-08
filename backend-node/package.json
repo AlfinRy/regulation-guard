@@ -1,0 +1,28 @@
+{
+  "name": "regulation-guard-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.3.0",
+    "@ai-sdk/anthropic": "^1.1.0",
+    "ai": "^4.1.0",
+    "hono": "^4.7.0",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^1.1.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pdf-parse": "^1.1.4",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
