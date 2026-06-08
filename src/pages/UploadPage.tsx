@@ -1,7 +1,9 @@
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Shield, Upload, FileText, ChevronRight, Check, X } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Shield, Upload, FileText, ChevronRight, Check, X, Settings, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { hasSettings, getCurrentProvider, getStoredModelName } from '../lib/byok';
+import ProviderIcon from '../components/ui/ProviderIcon';
 
 const REGULATIONS = [
   { id: 'gdpr', code: 'GDPR', name: 'EU General Data Protection Regulation', disabled: false },
@@ -20,6 +22,14 @@ export default function UploadPage() {
   const [selectedRegs, setSelectedRegs] = useState<string[]>(['gdpr', 'ojk']);
   const [isDragging, setIsDragging] = useState(false);
   const [docName, setDocName] = useState('');
+  const [isConfigured, setIsConfigured] = useState(hasSettings());
+
+  // Re-check settings on focus (user might have saved in settings tab)
+  useEffect(() => {
+    const check = () => setIsConfigured(hasSettings());
+    window.addEventListener('focus', check);
+    return () => window.removeEventListener('focus', check);
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -46,6 +56,10 @@ export default function UploadPage() {
   };
 
   const handleStart = () => {
+    if (!isConfigured) {
+      navigate('/settings');
+      return;
+    }
     if (file && selectedRegs.length > 0) {
       navigate('/review', { state: { fileName: file.name, regulations: selectedRegs } });
     }
@@ -60,8 +74,21 @@ export default function UploadPage() {
             <Shield className="w-4 h-4 text-accent-blue" />
             RegulationGuard
           </div>
-          <div className="font-mono text-xs text-text-muted">
-            UPLOAD &amp; CONFIGURE
+          <div className="flex items-center gap-3">
+            <div className="font-mono text-xs text-text-muted">
+              UPLOAD &amp; CONFIGURE
+            </div>
+            {isConfigured ? (
+              <Link to="/settings" className="inline-flex items-center gap-1.5 badge bg-accent-emerald/10 text-accent-emerald border-accent-emerald/20">
+                {getCurrentProvider() && <ProviderIcon provider={getCurrentProvider()!} size={12} />}
+                {getCurrentProvider()?.name} / {getStoredModelName()}
+              </Link>
+            ) : (
+              <Link to="/settings" className="inline-flex items-center gap-1.5 badge bg-accent-amber/10 text-accent-amber border-accent-amber/20">
+                <AlertTriangle className="w-3 h-3" />
+                No API key set
+              </Link>
+            )}
           </div>
         </div>
       </nav>
@@ -261,20 +288,28 @@ export default function UploadPage() {
                 </span>
               )}
             </div>
-            <button
-              disabled={!file || selectedRegs.length === 0}
-              onClick={handleStart}
-              className={`
-                inline-flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-md transition-all duration-200
-                ${file && selectedRegs.length > 0
-                  ? 'bg-btn-primary text-bg-base hover:bg-btn-primary-hover'
-                  : 'bg-bg-surface-3 text-text-muted cursor-not-allowed'
-                }
-              `}
-            >
-              Start Review
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-3">
+              {!isConfigured && (
+                <Link to="/settings" className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 border border-accent-amber/30 text-accent-amber hover:bg-accent-amber/5 transition-colors rounded-md">
+                  <Settings className="w-4 h-4" />
+                  Set API Key First
+                </Link>
+              )}
+              <button
+                disabled={!file || selectedRegs.length === 0}
+                onClick={handleStart}
+                className={`
+                  inline-flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-md transition-all duration-200
+                  ${file && selectedRegs.length > 0
+                    ? 'bg-btn-primary text-bg-base hover:bg-btn-primary-hover'
+                    : 'bg-bg-surface-3 text-text-muted cursor-not-allowed'
+                  }
+                `}
+              >
+                Start Review
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </main>

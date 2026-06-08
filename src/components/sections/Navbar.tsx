@@ -1,4 +1,4 @@
-import { Shield } from 'lucide-react';
+import { Shield, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 export default function Navbar() {
@@ -28,6 +28,17 @@ export default function Navbar() {
           )}
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            to="/settings"
+            className={`text-sm font-medium px-3 py-2 border transition-colors rounded-md ${
+              location.pathname === '/settings'
+                ? 'border-border-strong text-text-primary'
+                : 'border-transparent text-text-tertiary hover:text-text-secondary'
+            }`}
+            title="AI Provider Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </Link>
           <Link
             to="/upload"
             className="text-sm font-medium px-4 py-2 bg-btn-primary text-bg-base hover:bg-btn-primary-hover transition-colors rounded-md"
