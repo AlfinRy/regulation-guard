@@ -3,6 +3,7 @@ import { Shield, Download, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, F
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getReviewResult } from '../lib/api';
+import { downloadMarkdown, downloadPDF } from '../lib/export';
 import type { ReviewResult, ReportFinding } from '../lib/api';
 
 // Fallback sample data when no real report is available
@@ -142,11 +143,35 @@ export default function ResultsPage() {
                 </p>
               </div>
               <div className="flex gap-2">
-                <button className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 bg-btn-primary text-bg-base hover:bg-btn-primary-hover transition-colors rounded-md">
+                <button
+                  onClick={() => {
+                    if (reportData) {
+                      downloadPDF(reportData, fileName);
+                    }
+                  }}
+                  disabled={!reportData}
+                  className={`inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-md transition-colors ${
+                    reportData
+                      ? 'bg-btn-primary text-bg-base hover:bg-btn-primary-hover'
+                      : 'bg-bg-surface-3 text-text-muted cursor-not-allowed'
+                  }`}
+                >
                   <Download className="w-4 h-4" />
                   Export PDF
                 </button>
-                <button className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong transition-colors rounded-md">
+                <button
+                  onClick={() => {
+                    if (reportData) {
+                      downloadMarkdown(reportData, fileName);
+                    }
+                  }}
+                  disabled={!reportData}
+                  className={`inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-md transition-colors ${
+                    reportData
+                      ? 'border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong'
+                      : 'border border-border-subtle text-text-muted cursor-not-allowed'
+                  }`}
+                >
                   <FileText className="w-4 h-4" />
                   Markdown
                 </button>

@@ -91,6 +91,7 @@ ${JSON.stringify(scoredClauses, null, 2)}
 Legal cross-check findings:
 ${JSON.stringify(legalFindings, null, 2)}`,
     maxTokens: 4000,
+    abortSignal: AbortSignal.timeout(120_000),
   });
 
   try {

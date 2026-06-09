@@ -82,11 +82,27 @@ reviewRoutes.post('/review/start', async (c) => {
       const session = sessions.get(sessionId);
       if (session) {
         session.status = 'error';
+
+        // Provide user-friendly error messages
+        let errorMessage = err instanceof Error ? err.message : 'Pipeline failed unexpectedly.';
+
+        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('Invalid API key')) {
+          errorMessage = 'Invalid API key. Please check your settings and try again.';
+        } else if (errorMessage.includes('429') || errorMessage.includes('Rate limit') || errorMessage.includes('quota')) {
+          errorMessage = 'API rate limit or quota exceeded. Please wait or use a different provider.';
+        } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+          errorMessage = 'Access denied. Your API key does not have permission for this model.';
+        } else if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('fetch failed')) {
+          errorMessage = 'Cannot reach the AI provider. Please check your network connection.';
+        } else if (errorMessage.includes('model') && errorMessage.includes('not found')) {
+          errorMessage = 'Model not found. Please check the model name in your settings.';
+        }
+
         session.events.push({
           id: uuid(),
           agent: 'SYSTEM',
           type: 'error',
-          content: err instanceof Error ? err.message : 'Pipeline failed unexpectedly.',
+          content: errorMessage,
           timestamp: new Date().toISOString(),
         });
       }

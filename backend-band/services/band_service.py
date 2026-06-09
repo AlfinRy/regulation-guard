@@ -1,16 +1,16 @@
 """
 Band SDK wrapper service.
 
-Manages Band rooms via the Thenvoi platform. Each review session
+Manages Band rooms via the Thenvoi/Band platform. Each review session
 creates a chat room where 4 agents communicate via typed messages.
 
 Band SDK (Thenvoi) API:
-  - AsyncRestClient for REST operations (create chat, send messages)
-  - ThenvoiLink + AgentRuntime for WebSocket live connections
+  - thenvoi_rest.AsyncRestClient for REST operations (create chat, send messages/events)
 
 Environment variables:
   BAND_API_KEY  — API key from the Thenvoi/Band platform
-  BAND_BASE_URL — Platform base URL (default: https://platform.dev.thenvoi.com)
+  BAND_BASE_URL — Platform base URL (default: https://platform.dev.band.ai)
+  BAND_AGENT_XX_ID — Agent IDs registered on the Band platform
 """
 
 from __future__ import annotations
@@ -23,14 +23,14 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import AsyncIterator
 
-from thenvoi.client.rest import AsyncRestClient
+from thenvoi_rest import AsyncRestClient
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 
 BAND_API_KEY = os.environ.get("BAND_API_KEY", "")
-BAND_BASE_URL = os.environ.get("BAND_BASE_URL", "https://platform.dev.thenvoi.com")
+BAND_BASE_URL = os.environ.get("BAND_BASE_URL", "https://platform.dev.band.ai")
 
 # Agent IDs registered on the Band platform
 AGENT_IDS = {
@@ -92,13 +92,13 @@ async def create_room(session_id: str) -> BandRoom:
     """
     if _is_band_configured():
         client = _get_client()
-        chat = await client.agent_api_chats.create_agent_chat(
+        result = await client.agent_api_chats.create_agent_chat(
             request={
                 "content": f"RegulationGuard review session: {session_id}",
                 "mentions": [],
             },
         )
-        chat_id = chat.id
+        chat_id = result.data.id if hasattr(result, "data") else str(result.id)
     else:
         chat_id = f"local_{uuid.uuid4().hex[:12]}"
 
@@ -107,6 +107,7 @@ async def create_room(session_id: str) -> BandRoom:
         chat_id=chat_id,
     )
     _rooms[session_id] = room
+    print(f"[Band] Room created: {chat_id} (session: {session_id})")
     return room
 
 
@@ -122,6 +123,7 @@ async def close_room(session_id: str) -> bool:
         return False
     room.is_active = False
     del _rooms[session_id]
+    print(f"[Band] Room closed: {session_id}")
     return True
 
 
@@ -144,27 +146,30 @@ async def send_message(session_id: str, message: BandMessage) -> BandMessage:
     message.timestamp = message.timestamp or datetime.utcnow().isoformat()
     room.messages.append(message)
 
-    # If Band platform is configured, also send to the platform
+    # If Band platform is configured, also send to the platform as an event
     if _is_band_configured():
         try:
             client = _get_client()
             # Determine which agent is sending
             agent_id = AGENT_IDS.get(message.agent, AGENT_IDS["AGENT_01"])
+
+            # Use events endpoint for typed agent output
             await client.agent_api_events.create_agent_chat_event(
-                agent_id=agent_id,
                 chat_id=room.chat_id,
                 request={
-                    "type": "message",
-                    "content": json.dumps({
-                        "type": message.type,
-                        "agent": message.agent,
-                        "content": message.content,
-                    }),
+                    "event": {
+                        "content": json.dumps({
+                            "type": message.type,
+                            "agent": message.agent,
+                            "content": message.content,
+                        }),
+                        "message_type": "task",
+                    },
                 },
             )
         except Exception as e:
             # Band platform errors are non-fatal — message is still stored locally
-            print(f"[Band] Failed to send message to platform: {e}")
+            print(f"[Band] Failed to send event to platform: {e}")
 
     return message
 
@@ -196,9 +201,9 @@ async def stream_events(session_id: str) -> AsyncIterator[str]:
 
     while room.is_active:
         if len(room.messages) > last_index:
-            for msg in room.messages[last_index:]:
+            for i, msg in enumerate(room.messages[last_index:], start=last_index):
                 payload = {
-                    "id": f"msg_{last_index}",
+                    "id": f"msg_{i}",
                     "type": msg.type,
                     "agent": msg.agent,
                     "content": msg.content,

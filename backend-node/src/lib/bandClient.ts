@@ -10,6 +10,13 @@
 
 const BAND_SERVICE_URL = process.env.BAND_SERVICE_URL || 'http://localhost:8001';
 
+export interface BandMessageInput {
+  type: string;
+  agent: string;
+  content: string;
+  timestamp: string;
+}
+
 export interface BandMessage {
   type: string;
   agent: string;
@@ -39,7 +46,7 @@ export async function createBandRoom(sessionId: string): Promise<{ roomId: strin
  */
 export async function sendBandMessage(
   sessionId: string,
-  message: BandMessage,
+  message: BandMessageInput,
 ): Promise<void> {
   const res = await fetch(`${BAND_SERVICE_URL}/band/message/send`, {
     method: 'POST',

@@ -7,6 +7,7 @@ GET  /band/message/{session_id} — Get all messages from a Band room
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from datetime import datetime
 from services.band_service import send_message, get_room, get_messages
 
 router = APIRouter()
@@ -14,6 +15,10 @@ router = APIRouter()
 
 class SendMessageRequest(BaseModel):
     sessionId: str
+    message: BandMessageInput
+
+
+class BandMessageInput(BaseModel):
     type: str
     agent: str
     content: str
@@ -36,18 +41,18 @@ async def send_message_to_room(req: SendMessageRequest):
         raise HTTPException(status_code=404, detail="Session not found")
 
     msg = BandMessage(
-        type=req.type,
-        agent=req.agent,
-        content=req.content,
-        timestamp=req.timestamp,
+        type=req.message.type,
+        agent=req.message.agent,
+        content=req.message.content,
+        timestamp=req.message.timestamp or datetime.utcnow().isoformat(),
     )
 
     await send_message(req.sessionId, msg)
 
     return MessageResponse(
         status="sent",
-        agent=req.agent,
-        type=req.type,
+        agent=req.message.agent,
+        type=req.message.type,
     )
 
 

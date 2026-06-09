@@ -45,6 +45,7 @@ export async function runPolicyReader(
     system: SYSTEM_PROMPT,
     prompt: `Extract all clauses from the following document:\n\n${documentText}`,
     maxTokens: 4000,
+    abortSignal: AbortSignal.timeout(120_000), // 2 min timeout
   });
 
   try {

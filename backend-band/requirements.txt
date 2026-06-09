@@ -2,4 +2,5 @@ fastapi>=0.115.0
 uvicorn>=0.34.0
 pydantic>=2.10.0
 band-sdk>=0.2.11
+thenvoi-client-rest>=0.0.6
 sse-starlette>=2.2.0
