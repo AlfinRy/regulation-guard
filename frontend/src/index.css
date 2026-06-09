@@ -22,6 +22,41 @@
     background-color: #60a5fa33;
     color: #fafafa;
   }
+
+  /* ── Scrollbar ─────────────────────────────────────── */
+
+  /* Thin, zinc-toned track with a subtle blue thumb */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #3f3f46 transparent;
+  }
+
+  *:hover {
+    scrollbar-color: #60a5fa55 transparent;
+  }
+
+  /* Webkit (Chrome, Edge, Safari) */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #3f3f46;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #60a5fa88;
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 @layer components {
@@ -121,5 +156,10 @@
   .scanner-line {
     animation: none;
     display: none;
+  }
+
+  /* Disable smooth scroll to prevent motion sickness */
+  html {
+    scroll-behavior: auto;
   }
 }
