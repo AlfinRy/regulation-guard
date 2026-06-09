@@ -293,7 +293,6 @@ export function downloadPDF(result: ReviewResult, fileName: string): void {
   if (printWindow) {
     printWindow.document.write(html);
     printWindow.document.close();
-    // Wait for content to render, then trigger print
     printWindow.onload = () => {
       setTimeout(() => {
         printWindow.print();
