@@ -1,5 +1,6 @@
-import { Shield, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import Logo from '../ui/Logo';
 
 export default function Navbar() {
   const location = useLocation();
@@ -9,8 +10,8 @@ export default function Navbar() {
     <nav className="fixed top-0 w-full z-50 bg-bg-base/90 backdrop-blur-md border-b border-border-subtle">
       <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-6 h-14">
         <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2 text-text-primary font-semibold text-sm">
-            <Shield className="w-4 h-4 text-accent-blue" />
+          <Link to="/" className="flex items-center text-text-primary font-semibold text-md">
+            <Logo size={60} />
             RegulationGuard
           </Link>
           {isLanding && (

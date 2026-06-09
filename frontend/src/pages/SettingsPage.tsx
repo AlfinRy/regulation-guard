@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Shield, Eye, EyeOff, CheckCircle, XCircle, Loader2, ExternalLink, ArrowLeft, Trash2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, CheckCircle, XCircle, Loader2, ExternalLink, ArrowLeft, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PROVIDERS,
@@ -12,6 +12,7 @@ import {
   getProviderConfig,
 } from '../lib/byok';
 import ProviderIcon from '../components/ui/ProviderIcon';
+import Logo from '../components/ui/Logo';
 import { validateKey } from '../lib/api';
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
@@ -85,9 +86,11 @@ export default function SettingsPage() {
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 bg-bg-base/90 backdrop-blur-md border-b border-border-subtle">
         <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-6 h-14">
-          <div className="flex items-center gap-2 text-text-primary font-semibold text-sm">
-            <Shield className="w-4 h-4 text-accent-blue" />
-            RegulationGuard
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center text-text-primary font-semibold text-md">
+              <Logo size={60} />
+              RegulationGuard
+            </Link>
           </div>
           <div className="font-mono text-xs text-text-muted">
             SETTINGS

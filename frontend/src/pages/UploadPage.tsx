@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Shield, Upload, FileText, ChevronRight, Check, X, Settings, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, ChevronRight, Check, X, Settings, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { hasSettings, getCurrentProvider, getStoredModelName } from '../lib/byok';
 import ProviderIcon from '../components/ui/ProviderIcon';
+import Logo from '../components/ui/Logo';
 import { startReview } from '../lib/api';
 
 const REGULATIONS = [
@@ -90,10 +91,10 @@ export default function UploadPage() {
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 bg-bg-base/90 backdrop-blur-md border-b border-border-subtle">
         <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-6 h-14">
-          <div className="flex items-center gap-2 text-text-primary font-semibold text-sm">
-            <Shield className="w-4 h-4 text-accent-blue" />
+          <Link to="/" className="flex items-center text-text-primary font-semibold text-md">
+            <Logo size={60} />
             RegulationGuard
-          </div>
+          </Link>
           <div className="flex items-center gap-3">
             <div className="font-mono text-xs text-text-muted">
               UPLOAD &amp; CONFIGURE
