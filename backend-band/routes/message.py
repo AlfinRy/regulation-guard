@@ -13,16 +13,16 @@ from services.band_service import send_message, get_room, get_messages
 router = APIRouter()
 
 
-class SendMessageRequest(BaseModel):
-    sessionId: str
-    message: BandMessageInput
-
-
 class BandMessageInput(BaseModel):
     type: str
     agent: str
     content: str
     timestamp: str = ""
+
+
+class SendMessageRequest(BaseModel):
+    sessionId: str
+    message: BandMessageInput
 
 
 class MessageResponse(BaseModel):

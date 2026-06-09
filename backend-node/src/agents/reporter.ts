@@ -22,7 +22,8 @@ Rules:
    - passingCount: number of COMPLIANT findings
    - findings: array of all findings merged with clause text
 2. Each finding should include the original clause text, risk reasoning, and legal cross-check result.
-3. Return ONLY valid JSON. No markdown.
+3. Return ONLY valid JSON. No markdown, no code fences.
+4. Be concise with reasoning text — keep each one to 1-2 sentences.
 
 Example output:
 {
@@ -37,7 +38,7 @@ Example output:
       "id": "CL_002",
       "clauseText": "...",
       "category": "Data Retention",
-      "severity": "HIGH",
+      "severity": "CRITICAL",
       "status": "VIOLATION",
       "regulation": "GDPR",
       "article": "Art. 5(1)(e)",
@@ -71,6 +72,54 @@ export interface ComplianceReport {
   findings: ReportFinding[];
 }
 
+/**
+ * Attempt to repair truncated JSON by closing open structures.
+ */
+function tryRepairJSON(raw: string): ComplianceReport | null {
+  // Strip markdown fences
+  let json = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+  // If it parses as-is, great
+  try { return JSON.parse(json); } catch { /* continue */ }
+
+  // Try progressively: find the last complete object in the findings array
+  // by closing open brackets/braces
+  for (let trimFrom = json.length; trimFrom > 10; trimFrom--) {
+    const partial = json.slice(0, trimFrom);
+
+    // Find last complete finding object (closing })
+    const lastBrace = partial.lastIndexOf('}');
+    if (lastBrace === -1) continue;
+
+    let candidate = partial.slice(0, lastBrace + 1);
+
+    // Count open vs close for [ and {
+    const opens = (candidate.match(/[\[{]/g) || []).length;
+    const closes = (candidate.match(/[\]}]/g) || []).length;
+    const diff = opens - closes;
+
+    // Close what's open
+    candidate += ']'.repeat(diff);
+    candidate += '}'.repeat(1);
+
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed.overallRisk && parsed.findings && Array.isArray(parsed.findings)) {
+        console.log(`[Agent 4] Repaired JSON: recovered ${parsed.findings.length} findings`);
+        // Recount since some findings may have been dropped
+        parsed.criticalCount = parsed.findings.filter((f: ReportFinding) => f.status === 'VIOLATION').length;
+        parsed.warningCount = parsed.findings.filter((f: ReportFinding) => f.status === 'WARNING').length;
+        parsed.passingCount = parsed.findings.filter((f: ReportFinding) => f.status === 'COMPLIANT').length;
+        return parsed as ComplianceReport;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
 export async function runReporter(
   model: LanguageModelV1,
   clauses: ExtractedClause[],
@@ -90,8 +139,8 @@ ${JSON.stringify(scoredClauses, null, 2)}
 
 Legal cross-check findings:
 ${JSON.stringify(legalFindings, null, 2)}`,
-    maxTokens: 4000,
-    abortSignal: AbortSignal.timeout(120_000),
+    maxTokens: 8000,
+    abortSignal: AbortSignal.timeout(300_000),
   });
 
   try {
@@ -99,7 +148,11 @@ ${JSON.stringify(legalFindings, null, 2)}`,
     const report: ComplianceReport = JSON.parse(cleaned);
     return report;
   } catch {
-    console.error('[Agent 4] Failed to parse report response:', text.slice(0, 200));
+    console.error('[Agent 4] Failed to parse report response. Attempting repair...');
+    const repaired = tryRepairJSON(text);
+    if (repaired) return repaired;
+
+    console.error('[Agent 4] Repair failed. Raw response:', text.slice(0, 300));
     throw new Error('Agent 4 (Compliance Reporter) failed. The model response was not valid JSON.');
   }
 }

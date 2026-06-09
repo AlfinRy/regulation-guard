@@ -84,8 +84,8 @@ ${JSON.stringify(riskyClauses, null, 2)}
 
 Risk analysis context:
 ${JSON.stringify(riskContext, null, 2)}`,
-    maxTokens: 4000,
-    abortSignal: AbortSignal.timeout(120_000),
+    maxTokens: 6000,
+    abortSignal: AbortSignal.timeout(300_000),
   });
 
   try {

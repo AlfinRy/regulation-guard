@@ -1,9 +1,9 @@
 /**
  * Review routes — the main pipeline.
  *
- * POST /api/review/start   — upload doc + config, start the 4-agent pipeline
- * GET  /api/review/:id/stream — SSE stream of agent progress
- * GET  /api/review/:id/result  — get final compliance report
+ * POST /api/review/start   — upload doc + config, create session (pipeline NOT started yet)
+ * GET  /api/review/:id/stream — SSE stream, starts the pipeline on first connection
+ * GET  /api/review/:id/result — get final compliance report
  */
 
 import { Hono } from 'hono';
@@ -20,13 +20,17 @@ import type { ComplianceReport } from '../agents/reporter.js';
 
 export const reviewRoutes = new Hono();
 
-// In-memory session store (replace with DB later)
+// In-memory session store
 const sessions = new Map<string, {
-  status: 'running' | 'complete' | 'error';
+  status: 'pending' | 'running' | 'complete' | 'error';
   fileName: string;
   regulations: string[];
   report: ComplianceReport | null;
   events: SSEEvent[];
+  // Stored config for lazy pipeline start
+  fileBuffer: Buffer | null;
+  aiConfig: { apiKey: string; providerUrl: string; modelName: string } | null;
+  pipelineStarted: boolean;
 }>();
 
 interface SSEEvent {
@@ -66,49 +70,19 @@ reviewRoutes.post('/review/start', async (c) => {
   const sessionId = uuid();
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  // Initialize session
+  // Create session in "pending" state — pipeline starts when SSE connects
   sessions.set(sessionId, {
-    status: 'running',
+    status: 'pending',
     fileName: file.name,
     regulations,
     report: null,
     events: [],
+    fileBuffer: buffer,
+    aiConfig: { apiKey, providerUrl, modelName },
+    pipelineStarted: false,
   });
 
-  // Run pipeline asynchronously
-  runPipeline(sessionId, buffer, file.name, regulations, { apiKey, providerUrl, modelName })
-    .catch(err => {
-      console.error(`[Pipeline] Session ${sessionId} failed:`, err);
-      const session = sessions.get(sessionId);
-      if (session) {
-        session.status = 'error';
-
-        // Provide user-friendly error messages
-        let errorMessage = err instanceof Error ? err.message : 'Pipeline failed unexpectedly.';
-
-        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('Invalid API key')) {
-          errorMessage = 'Invalid API key. Please check your settings and try again.';
-        } else if (errorMessage.includes('429') || errorMessage.includes('Rate limit') || errorMessage.includes('quota')) {
-          errorMessage = 'API rate limit or quota exceeded. Please wait or use a different provider.';
-        } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
-          errorMessage = 'Access denied. Your API key does not have permission for this model.';
-        } else if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('fetch failed')) {
-          errorMessage = 'Cannot reach the AI provider. Please check your network connection.';
-        } else if (errorMessage.includes('model') && errorMessage.includes('not found')) {
-          errorMessage = 'Model not found. Please check the model name in your settings.';
-        }
-
-        session.events.push({
-          id: uuid(),
-          agent: 'SYSTEM',
-          type: 'error',
-          content: errorMessage,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    });
-
-  return c.json({ sessionId, status: 'running' });
+  return c.json({ sessionId, status: 'pending' });
 });
 
 // ─── GET /api/review/:id/stream ────────────────────────────
@@ -122,18 +96,65 @@ reviewRoutes.get('/review/:sessionId/stream', async (c) => {
   }
 
   return streamSSE(c, async (stream) => {
+    // Start the pipeline NOW (SSE is connected, frontend is listening)
+    if (!session.pipelineStarted && session.fileBuffer && session.aiConfig) {
+      session.pipelineStarted = true;
+      session.status = 'running';
+
+      const fileBuffer = session.fileBuffer;
+      const aiConfig = session.aiConfig;
+      // Free the buffer from session memory
+      session.fileBuffer = null;
+
+      // Fire and forget — pipeline runs in background
+      runPipeline(sessionId, fileBuffer, session.fileName, session.regulations, aiConfig)
+        .catch(err => {
+          console.error(`[Pipeline] Session ${sessionId} failed:`, err);
+          const s = sessions.get(sessionId);
+          if (s) {
+            s.status = 'error';
+
+            let errorMessage = err instanceof Error ? err.message : 'Pipeline failed unexpectedly.';
+
+            if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('Invalid API key')) {
+              errorMessage = 'Invalid API key. Please check your settings and try again.';
+            } else if (errorMessage.includes('429') || errorMessage.includes('Rate limit') || errorMessage.includes('quota')) {
+              errorMessage = 'API rate limit or quota exceeded. Please wait or use a different provider.';
+            } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+              errorMessage = 'Access denied. Your API key does not have permission for this model.';
+            } else if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('fetch failed')) {
+              errorMessage = 'Cannot reach the AI provider. Please check your network connection.';
+            } else if (errorMessage.includes('model') && errorMessage.includes('not found')) {
+              errorMessage = 'Model not found. Please check the model name in your settings.';
+            } else if (errorMessage.includes('aborted') || errorMessage.includes('timeout') || errorMessage.includes('Timeout')) {
+              errorMessage = 'Request timed out. The provider may be slow or unreachable. Try again or use a different model.';
+            }
+
+            s.events.push({
+              id: uuid(),
+              agent: 'SYSTEM',
+              type: 'error',
+              content: errorMessage,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        });
+    }
+
     let lastIndex = 0;
 
-    // Send existing events first
-    for (const event of session.events) {
-      await stream.writeSSE({
-        event: event.type,
-        data: JSON.stringify(event),
-      });
+    // Send any existing events first
+    if (session.events.length > 0) {
+      for (const event of session.events) {
+        await stream.writeSSE({
+          event: event.type,
+          data: JSON.stringify(event),
+        });
+      }
+      lastIndex = session.events.length;
     }
-    lastIndex = session.events.length;
 
-    // Poll for new events until complete
+    // Poll for new events until pipeline finishes
     while (true) {
       if (session.events.length > lastIndex) {
         for (let i = lastIndex; i < session.events.length; i++) {
@@ -146,7 +167,7 @@ reviewRoutes.get('/review/:sessionId/stream', async (c) => {
       }
 
       if (session.status === 'complete' || session.status === 'error') {
-        // Send final event
+        // Send final status event
         await stream.writeSSE({
           event: session.status,
           data: JSON.stringify({
@@ -162,8 +183,7 @@ reviewRoutes.get('/review/:sessionId/stream', async (c) => {
         break;
       }
 
-      // Wait before polling again
-      await stream.sleep(500);
+      await stream.sleep(200);
     }
   });
 });
@@ -211,7 +231,7 @@ async function runPipeline(
       timestamp: new Date().toISOString(),
     };
     session.events.push(event);
-    console.log(`[Pipeline] ${agent}: ${content.slice(0, 80)}...`);
+    console.log(`[Pipeline] ${agent}: ${content.slice(0, 100)}`);
   };
 
   // Step 0: Parse document
@@ -219,7 +239,7 @@ async function runPipeline(
   const documentText = await parseDocument(fileBuffer, fileName);
   pushEvent('AGENT_01', 'clause_extraction_result', `Document parsed. ${documentText.length} characters extracted.`);
 
-  // Try to create Band room (non-blocking — fail gracefully if Python service isn't running)
+  // Try to create Band room (non-blocking)
   let bandRoomId: string | null = null;
   try {
     const { roomId } = await createBandRoom(sessionId);
@@ -281,7 +301,7 @@ async function runPipeline(
     await closeBandRoom(sessionId).catch(() => {});
   }
 
-  // Save report
+  // Save report and mark complete
   session.report = report;
   session.status = 'complete';
 

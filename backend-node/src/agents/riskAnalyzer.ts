@@ -45,8 +45,8 @@ export async function runRiskAnalyzer(
     model,
     system: SYSTEM_PROMPT,
     prompt: `Analyze the risk level of these clauses:\n\n${JSON.stringify(clauses, null, 2)}`,
-    maxTokens: 4000,
-    abortSignal: AbortSignal.timeout(120_000),
+    maxTokens: 6000,
+    abortSignal: AbortSignal.timeout(300_000),
   });
 
   try {
