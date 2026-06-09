@@ -18,7 +18,7 @@ export default function Footer() {
           <a href="#risk-table" className="hover:text-text-secondary transition-colors">Risk Data</a>
           <a href="#coverage" className="hover:text-text-secondary transition-colors">Coverage</a>
           <a
-            href="https://github.com"
+            href="https://github.com/AlfinRy/regulation-guard"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-text-secondary transition-colors"
