@@ -42,7 +42,7 @@ export default function PipelineSection() {
 						<div className="grid lg:grid-cols-2 grid-cols-1">
 							{/* Left: Description */}
 							<div className="flex flex-col items-start gap-6 p-8 lg:p-12">
-								<span className="font-mono text-xs text-text-muted tracking-wider uppercase">4-Agent Pipeline</span>
+								<span className="font-mono text-xs text-text-secondary tracking-wider uppercase">4-Agent Pipeline</span>
 								<h2 className="text-heading text-balance">One document flows through four specialists.</h2>
 								<p className="text-body-lg text-text-secondary text-balance">Each agent reads the previous agent's output, applies its own analysis, and hands off structured data to the next. Every decision is logged, every handoff is traceable.</p>
 								<div className="mt-2 w-full">

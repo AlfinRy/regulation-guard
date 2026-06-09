@@ -18,7 +18,7 @@ export default function CoverageSection() {
 				<CornerGlow color="#34d399" position="top-left" opacity={0.3}>
 					<CornerGlow color="#34d399" position="bottom-right" opacity={0.15}>
 						<div className="p-8 lg:p-12 text-center">
-							<span className="font-mono text-xs text-text-muted tracking-wider uppercase">Jurisdictional Coverage</span>
+							<span className="font-mono text-xs text-text-secondary tracking-wider uppercase">Jurisdictional Coverage</span>
 							<h2 className="text-heading text-balance mt-3 mx-auto">450+ regulatory frameworks, live-synced hourly.</h2>
 							<p className="text-body-lg text-text-secondary text-balance max-w-2xl mx-auto mt-4">RegulationGuard maintains a knowledge base of regional and international compliance frameworks. The logic updates as legal landscapes change.</p>
 						</div>

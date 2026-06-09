@@ -41,7 +41,7 @@ export default function LedgerSection() {
 						<div className="grid lg:grid-cols-2 grid-cols-1">
 							{/* Left: Description */}
 							<div className="flex flex-col items-start gap-6 p-8 lg:p-12">
-								<span className="font-mono text-xs text-text-muted tracking-wider uppercase">Audit Trail</span>
+								<span className="font-mono text-xs text-text-secondary tracking-wider uppercase">Audit Trail</span>
 								<h2 className="text-heading text-balance">Every agent decision is logged and traceable.</h2>
 								<p className="text-body text-text-secondary text-balance">Every audit, agent decision, and remediation step is recorded to a cryptographic trail. No black-box decisions, no lost context.</p>
 

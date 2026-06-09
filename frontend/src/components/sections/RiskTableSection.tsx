@@ -41,7 +41,7 @@ export default function RiskTableSection() {
 						<div className="grid lg:grid-cols-5 grid-cols-1">
 							{/* Left: Summary */}
 							<div className="lg:col-span-2 flex flex-col items-start gap-6 p-8 lg:p-12">
-								<span className="font-mono text-xs text-text-muted tracking-wider uppercase">Risk Intelligence</span>
+								<span className="font-mono text-xs text-text-secondary tracking-wider uppercase">Risk Intelligence</span>
 								<h2 className="text-heading text-balance">Live compliance posture, clause by clause.</h2>
 								<p className="text-body text-text-secondary text-balance">Every requirement mapped against its regulation, scored for risk, and measured for confidence. No fluff.</p>
 
