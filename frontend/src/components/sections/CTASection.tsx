@@ -11,7 +11,7 @@ export default function CTASection() {
 			<div className="max-w-content mx-auto border-x border-border-subtle">
 				<CornerGlow color="#818cf8" position="top-left" opacity={0.3}>
 					<CornerGlow color="#818cf8" position="bottom-right" opacity={0.15}>
-						<div className="flex flex-col items-center gap-8 p-8 lg:p-16 text-center">
+						<div className="flex flex-col items-center gap-8 p-4 sm:p-8 lg:p-16 text-center">
 							<div className="space-y-4">
 								<h2 className="text-heading text-balance">Get started</h2>
 								<p className="text-body-lg text-text-secondary max-w-xl">Run your first compliance review in under 3 minutes.</p>

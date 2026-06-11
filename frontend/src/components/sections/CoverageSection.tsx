@@ -17,13 +17,13 @@ export default function CoverageSection() {
 			<div className="max-w-content mx-auto border-x border-border-subtle">
 				<CornerGlow color="#34d399" position="top-left" opacity={0.3}>
 					<CornerGlow color="#34d399" position="bottom-right" opacity={0.15}>
-						<div className="p-8 lg:p-12 text-center">
+						<div className="p-4 sm:p-8 lg:p-12 text-center">
 							<span className="font-mono text-xs text-text-secondary tracking-wider uppercase">Jurisdictional Coverage</span>
 							<h2 className="text-heading text-balance mt-3 mx-auto">450+ regulatory frameworks, live-synced hourly.</h2>
 							<p className="text-body-lg text-text-secondary text-balance max-w-2xl mx-auto mt-4">RegulationGuard maintains a knowledge base of regional and international compliance frameworks. The logic updates as legal landscapes change.</p>
 						</div>
 
-						<div className="px-4 lg:px-8 pb-8 lg:pb-12">
+						<div className="px-4 sm:px-8 pb-4 sm:pb-8 lg:pb-12">
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 								{regulations.map((reg) => (
 									<div key={reg.code} className="p-4 border border-border-subtle bg-bg-surface-2 hover:border-border-default transition-colors">

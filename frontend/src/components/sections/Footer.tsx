@@ -3,7 +3,7 @@ import Logo from '../ui/Logo';
 export default function Footer() {
   return (
     <footer className="border-t border-border-subtle">
-      <div className="max-w-content mx-auto border-x border-border-subtle px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="max-w-content mx-auto border-x border-border-subtle px-4 sm:px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex flex-col gap-1.5">
           <a href="/" className="flex items-center text-text-primary font-semibold text-md">
             <Logo size={60} />

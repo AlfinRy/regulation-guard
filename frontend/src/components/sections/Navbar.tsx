@@ -8,8 +8,8 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-bg-base/90 backdrop-blur-md border-b border-border-subtle">
-      <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-6 h-14">
-        <div className="flex items-center gap-6">
+      <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-4 sm:px-6 h-14">
+        <div className="flex items-center gap-4 sm:gap-6">
           <Link to="/" className="flex items-center text-text-primary font-semibold text-md">
             <Logo size={60} />
             RegulationGuard
@@ -28,10 +28,10 @@ export default function Navbar() {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/settings"
-            className={`text-sm font-medium px-3 py-2 border transition-colors rounded-md ${
+            className={`text-sm font-medium px-2 sm:px-3 py-2 border transition-colors rounded-md ${
               location.pathname === '/settings'
                 ? 'border-border-strong text-text-primary'
                 : 'border-transparent text-text-tertiary hover:text-text-secondary'
@@ -42,9 +42,10 @@ export default function Navbar() {
           </Link>
           <Link
             to="/upload"
-            className="text-sm font-medium px-4 py-2 bg-btn-primary text-bg-base hover:bg-btn-primary-hover transition-colors rounded-md"
+            className="text-sm font-medium px-3 sm:px-4 py-2 bg-btn-primary text-bg-base hover:bg-btn-primary-hover transition-colors rounded-md"
           >
-            Start Review
+            <span className="hidden sm:inline">Start Review</span>
+            <span className="sm:hidden">Review</span>
           </Link>
         </div>
       </div>

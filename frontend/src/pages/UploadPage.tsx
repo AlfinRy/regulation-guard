@@ -90,14 +90,15 @@ export default function UploadPage() {
     <div className="min-h-screen bg-bg-base">
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 bg-bg-base/90 backdrop-blur-md border-b border-border-subtle">
-        <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-6 h-14">
-          <Link to="/" className="flex items-center text-text-primary font-semibold text-md">
+        <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-4 sm:px-6 h-14">
+          <Link to="/" className="flex items-center text-text-primary font-semibold text-sm sm:text-md">
             <Logo size={60} />
-            RegulationGuard
+            <span className="hidden sm:inline">RegulationGuard</span>
+            <span className="sm:hidden">RG</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <div className="font-mono text-xs text-text-muted">
-              UPLOAD &amp; CONFIGURE
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="font-mono text-[10px] sm:text-xs text-text-muted">
+              UPLOAD
             </div>
             {isConfigured ? (
               <Link to="/settings" className="inline-flex items-center gap-1.5 badge bg-accent-emerald/10 text-accent-emerald border-accent-emerald/20">
@@ -117,7 +118,7 @@ export default function UploadPage() {
       <main className="pt-14">
         <div className="max-w-content mx-auto border-x border-border-subtle">
           {/* Header */}
-          <div className="border-b border-border-subtle px-8 py-6">
+          <div className="border-b border-border-subtle px-4 sm:px-8 py-6">
             <div className="flex items-center gap-3 text-text-muted font-mono text-xs mb-3">
               <span className="text-text-tertiary">01</span>
               <span className="h-px flex-1 bg-border-subtle" />
@@ -125,7 +126,7 @@ export default function UploadPage() {
               <span className="h-px bg-border-subtle w-8" />
               <span className="text-text-tertiary">03</span>
             </div>
-            <h1 className="text-heading">Upload document</h1>
+            <h1 className="text-subheading sm:text-heading">Upload document</h1>
             <p className="text-body text-text-secondary mt-2">
               Drag and drop your contract or policy document. Select target regulations, then start the review.
             </p>
@@ -133,7 +134,7 @@ export default function UploadPage() {
 
           <div className="grid lg:grid-cols-5 grid-cols-1">
             {/* Left: Upload zone */}
-            <div className="lg:col-span-3 border-r border-border-subtle p-8">
+            <div className="lg:col-span-3 lg:border-r border-b lg:border-b-0 border-border-subtle p-4 sm:p-8">
               <div className="font-mono text-xs text-text-muted mb-4">
                 DOCUMENT_INPUT
               </div>
@@ -228,7 +229,7 @@ export default function UploadPage() {
             </div>
 
             {/* Right: Regulation selector */}
-            <div className="lg:col-span-2 p-8">
+            <div className="lg:col-span-2 p-4 sm:p-8">
               <div className="font-mono text-xs text-text-muted mb-4">
                 TARGET_REGULATIONS
               </div>
@@ -293,7 +294,7 @@ export default function UploadPage() {
           </div>
 
           {/* Footer action bar */}
-          <div className="border-t border-border-subtle px-8 py-5 flex items-center justify-between">
+          <div className="border-t border-border-subtle px-4 sm:px-8 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="font-mono text-xs text-text-muted">
               {file ? (
                 <span className="text-text-secondary">
@@ -309,21 +310,22 @@ export default function UploadPage() {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto sm:flex-shrink-0 justify-end">
               {startError && (
                 <span className="font-mono text-xs text-accent-red">{startError}</span>
               )}
               {!isConfigured && (
                 <Link to="/settings" className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 border border-accent-amber/30 text-accent-amber hover:bg-accent-amber/5 transition-colors rounded-md">
                   <Settings className="w-4 h-4" />
-                  Set API Key First
+                  <span className="hidden sm:inline">Set API Key First</span>
+                  <span className="sm:hidden">API Key</span>
                 </Link>
               )}
               <button
                 disabled={!file || selectedRegs.length === 0 || isStarting}
                 onClick={handleStart}
                 className={`
-                  inline-flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-md transition-all duration-200
+                  inline-flex items-center gap-2 text-sm font-medium px-4 sm:px-6 py-2.5 rounded-md transition-all duration-200
                   ${file && selectedRegs.length > 0 && !isStarting
                     ? 'bg-btn-primary text-bg-base hover:bg-btn-primary-hover'
                     : 'bg-bg-surface-3 text-text-muted cursor-not-allowed'

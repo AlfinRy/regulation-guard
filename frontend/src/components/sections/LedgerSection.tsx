@@ -40,7 +40,7 @@ export default function LedgerSection() {
 					<CornerGlow color="#22d3ee" position="bottom-right" opacity={0.15}>
 						<div className="grid lg:grid-cols-2 grid-cols-1">
 							{/* Left: Description */}
-							<div className="flex flex-col items-start gap-6 p-8 lg:p-12">
+							<div className="flex flex-col items-start gap-6 p-4 sm:p-8 lg:p-12">
 								<span className="font-mono text-xs text-text-secondary tracking-wider uppercase">Audit Trail</span>
 								<h2 className="text-heading text-balance">Every agent decision is logged and traceable.</h2>
 								<p className="text-body text-text-secondary text-balance">Every audit, agent decision, and remediation step is recorded to a cryptographic trail. No black-box decisions, no lost context.</p>
@@ -76,7 +76,7 @@ export default function LedgerSection() {
 							</div>
 
 							{/* Right: Timeline */}
-							<div className="p-8 lg:p-12 border-l border-border-subtle">
+							<div className="p-4 sm:p-8 lg:p-12 lg:border-l border-b lg:border-b-0 border-border-subtle">
 								<div className="space-y-0">
 									{timelineData.map((entry) => (
 										<TimelineEntry key={entry.txId} {...entry} />

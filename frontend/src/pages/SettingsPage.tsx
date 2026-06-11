@@ -85,11 +85,12 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-bg-base">
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 bg-bg-base/90 backdrop-blur-md border-b border-border-subtle">
-        <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-6 h-14">
+        <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-4 sm:px-6 h-14">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center text-text-primary font-semibold text-md">
+            <Link to="/" className="flex items-center text-text-primary font-semibold text-sm sm:text-md">
               <Logo size={60} />
-              RegulationGuard
+              <span className="hidden sm:inline">RegulationGuard</span>
+              <span className="sm:hidden">RG</span>
             </Link>
           </div>
           <div className="font-mono text-xs text-text-muted">
@@ -101,7 +102,7 @@ export default function SettingsPage() {
       <main className="pt-14">
         <div className="max-w-content mx-auto border-x border-border-subtle">
           {/* Header */}
-          <div className="border-b border-border-subtle px-8 py-6">
+          <div className="border-b border-border-subtle px-4 sm:px-8 py-6">
             <div className="flex items-center gap-3 mb-3">
               <button
                 onClick={() => navigate(-1)}
@@ -109,7 +110,7 @@ export default function SettingsPage() {
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <h1 className="text-heading">AI Provider Settings</h1>
+              <h1 className="text-subheading sm:text-heading">AI Provider Settings</h1>
             </div>
             <p className="text-body text-text-secondary">
               Select an AI provider and enter your API key. Your key is stored in your browser and is never sent to our servers for storage.
@@ -118,7 +119,7 @@ export default function SettingsPage() {
 
           <div className="grid lg:grid-cols-3 grid-cols-1">
             {/* Main form */}
-            <div className="lg:col-span-2 border-r border-border-subtle p-8">
+            <div className="lg:col-span-2 lg:border-r border-b lg:border-b-0 border-border-subtle p-4 sm:p-8">
               <div className="max-w-lg">
 
                   {/* Provider grid selector */}
@@ -266,7 +267,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Right sidebar: Info */}
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               {/* Current config preview */}
               <div className="border border-border-subtle p-4 mb-6">
                 <div className="font-mono text-xs text-text-muted mb-3">

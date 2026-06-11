@@ -114,10 +114,11 @@ export default function ResultsPage() {
     <div className="min-h-screen bg-bg-base">
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 bg-bg-base/90 backdrop-blur-md border-b border-border-subtle">
-        <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-6 h-14">
-          <Link to="/" className="flex items-center text-text-primary font-semibold text-md">
+        <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-4 sm:px-6 h-14">
+          <Link to="/" className="flex items-center text-text-primary font-semibold text-sm sm:text-md">
             <Logo size={60} />
-            RegulationGuard
+            <span className="hidden sm:inline">RegulationGuard</span>
+            <span className="sm:hidden">RG</span>
           </Link>
           <div className="font-mono text-xs text-accent-emerald">
             REVIEW COMPLETE
@@ -128,7 +129,7 @@ export default function ResultsPage() {
       <main className="pt-14">
         <div className="max-w-content mx-auto border-x border-border-subtle">
           {/* Header */}
-          <div className="border-b border-border-subtle px-8 py-6">
+          <div className="border-b border-border-subtle px-4 sm:px-8 py-6">
             <div className="flex items-center gap-3 text-text-muted font-mono text-xs mb-3">
               <span className="text-text-secondary">01</span>
               <span className="h-px bg-border-subtle w-8" />
@@ -136,14 +137,14 @@ export default function ResultsPage() {
               <span className="h-px bg-border-subtle w-8" />
               <span className="text-text-secondary">03</span>
             </div>
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
-                <h1 className="text-heading">Compliance Report</h1>
+                <h1 className="text-subheading sm:text-heading">Compliance Report</h1>
                 <p className="text-xs text-text-tertiary font-mono mt-2">
                   {fileName} · {regLabels} · Generated {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-shrink-0">
                 <button
                   onClick={() => {
                     if (reportData) {
@@ -151,14 +152,15 @@ export default function ResultsPage() {
                     }
                   }}
                   disabled={!reportData}
-                  className={`inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-md transition-colors ${
+                  className={`inline-flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2 rounded-md transition-colors ${
                     reportData
                       ? 'bg-btn-primary text-bg-base hover:bg-btn-primary-hover'
                       : 'bg-bg-surface-3 text-text-muted cursor-not-allowed'
                   }`}
                 >
                   <Download className="w-4 h-4" />
-                  Export PDF
+                  <span className="hidden sm:inline">Export PDF</span>
+                  <span className="sm:hidden">PDF</span>
                 </button>
                 <button
                   onClick={() => {
@@ -167,14 +169,15 @@ export default function ResultsPage() {
                     }
                   }}
                   disabled={!reportData}
-                  className={`inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-md transition-colors ${
+                  className={`inline-flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2 rounded-md transition-colors ${
                     reportData
                       ? 'border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong'
                       : 'border border-border-subtle text-text-muted cursor-not-allowed'
                   }`}
                 >
                   <FileText className="w-4 h-4" />
-                  Markdown
+                  <span className="hidden sm:inline">Markdown</span>
+                  <span className="sm:hidden">MD</span>
                 </button>
               </div>
             </div>
@@ -185,7 +188,7 @@ export default function ResultsPage() {
             <div className="border-b border-border-subtle px-4 py-3 bg-bg-surface-2">
               <span className="font-mono text-xs text-text-muted">EXECUTIVE_SUMMARY</span>
             </div>
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               <div className="grid sm:grid-cols-4 grid-cols-2 gap-4 mb-6">
                 <div className="border border-border-subtle p-4">
                   <div className="font-mono text-xs text-text-muted mb-2">OVERALL_RISK</div>
@@ -252,8 +255,8 @@ export default function ResultsPage() {
                 RISK_MATRIX — {FINDINGS.length} clauses evaluated
               </span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
+            <div className="overflow-x-auto -mx-px">
+              <table className="w-full min-w-[640px] text-left">
                 <thead>
                   <tr className="border-b border-border-subtle bg-bg-surface-3">
                     <th className="px-4 py-2.5 font-mono text-xs text-text-muted font-normal">CLAUSE</th>
@@ -306,7 +309,7 @@ export default function ResultsPage() {
 
           {/* Detailed Clause Analysis */}
           <div className="border-b border-border-subtle">
-            <div className="border-b border-border-subtle px-4 py-3 bg-bg-surface-2 flex items-center justify-between">
+            <div className="border-b border-border-subtle px-4 py-3 bg-bg-surface-2 flex items-center justify-between gap-2">
               <span className="font-mono text-xs text-text-muted">
                 CLAUSE_ANALYSIS — detailed findings
               </span>
@@ -336,7 +339,7 @@ export default function ResultsPage() {
                   >
                     <button
                       onClick={() => setExpandedId(expandedId === finding.id ? null : finding.id)}
-                      className="w-full px-6 py-4 flex items-center gap-4 text-left hover:bg-bg-surface-2/30 transition-colors"
+                      className="w-full px-4 sm:px-6 py-4 flex items-center gap-3 sm:gap-4 text-left hover:bg-bg-surface-2/30 transition-colors"
                     >
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                         finding.severity === 'CRITICAL' ? 'bg-accent-red' :
@@ -376,7 +379,7 @@ export default function ResultsPage() {
                           transition={{ duration: 0.2 }}
                           className="overflow-hidden"
                         >
-                          <div className="px-6 pb-5 pt-1">
+                          <div className="px-4 sm:px-6 pb-5 pt-1">
                             <div className="grid sm:grid-cols-2 grid-cols-1 gap-4 mb-4">
                               <div>
                                 <div className="font-mono text-[10px] text-text-muted mb-1">CLAUSE_TEXT</div>
@@ -418,7 +421,7 @@ export default function ResultsPage() {
             <div className="border-b border-border-subtle px-4 py-3 bg-bg-surface-2">
               <span className="font-mono text-xs text-text-muted">REGULATORY_REFERENCES</span>
             </div>
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {Object.entries(regCitations).map(([reg, articles]) => (
                   <div key={reg} className="border border-border-subtle p-4">
@@ -441,7 +444,7 @@ export default function ResultsPage() {
           </div>
 
           {/* Footer */}
-          <div className="px-8 py-6 flex items-center justify-between">
+          <div className="px-4 sm:px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div className="font-mono text-xs text-text-muted">
               Session: {sessionId || 'demo'} · 4/4 agents completed · Immutable
             </div>

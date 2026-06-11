@@ -210,14 +210,15 @@ export default function ReviewPage() {
     <div className="min-h-screen bg-bg-base">
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 bg-bg-base/90 backdrop-blur-md border-b border-border-subtle">
-        <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-6 h-14">
-          <Link to="/" className="flex items-center text-text-primary font-semibold text-md">
+        <div className="max-w-content mx-auto border-x border-border-subtle flex justify-between items-center px-4 sm:px-6 h-14">
+          <Link to="/" className="flex items-center text-text-primary font-semibold text-sm sm:text-md">
             <Logo size={60} />
-            RegulationGuard
+            <span className="hidden sm:inline">RegulationGuard</span>
+            <span className="sm:hidden">RG</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <div className="font-mono text-xs text-text-muted">
-              REVIEW IN PROGRESS
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="font-mono text-[10px] sm:text-xs text-text-muted">
+              REVIEW
             </div>
             <div className="font-mono text-xs text-accent-cyan">
               {overallProgress}%
@@ -229,7 +230,7 @@ export default function ReviewPage() {
       <main className="pt-14">
         <div className="max-w-content mx-auto border-x border-border-subtle">
           {/* Header */}
-          <div className="border-b border-border-subtle px-8 py-4">
+          <div className="border-b border-border-subtle px-4 sm:px-8 py-4">
             <div className="flex items-center gap-3 text-text-muted font-mono text-xs mb-2">
               <span className="text-text-secondary">01</span>
               <span className="h-px bg-border-subtle w-8" />
@@ -237,7 +238,7 @@ export default function ReviewPage() {
               <span className="h-px flex-1 bg-border-subtle" />
               <span className={allDone ? 'text-accent-emerald' : 'text-text-tertiary'}>03</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-3">
               <div>
                 <h1 className="text-subheading">Live Review</h1>
                 <p className="text-xs text-text-tertiary font-mono mt-1">
@@ -249,7 +250,7 @@ export default function ReviewPage() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   onClick={() => navigate('/results', { state: { sessionId, fileName, regulations, result } })}
-                  className="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 bg-btn-primary text-bg-base hover:bg-btn-primary-hover transition-colors rounded-md"
+                  className="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 bg-btn-primary text-bg-base hover:bg-btn-primary-hover transition-colors rounded-md w-full sm:w-auto justify-center"
                 >
                   View Results
                   <ArrowRight className="w-4 h-4" />
@@ -259,12 +260,12 @@ export default function ReviewPage() {
           </div>
 
           {/* Agent progress bar */}
-          <div className="border-b border-border-subtle px-8 py-4">
-            <div className="flex items-center gap-3">
+          <div className="border-b border-border-subtle px-4 sm:px-8 py-4">
+            <div className="flex items-center gap-1 sm:gap-3 overflow-x-auto">
               {agents.map((agent) => {
                 const Icon = agent.icon;
                 return (
-                  <div key={agent.id} className="flex-1">
+                  <div key={agent.id} className="flex-1 min-w-[140px] sm:min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <Icon className={`w-3.5 h-3.5 ${
                         agent.status === 'complete' ? 'text-accent-emerald' :
@@ -310,7 +311,7 @@ export default function ReviewPage() {
 
           {/* Error banner */}
           {error && (
-            <div className="border-b border-accent-red/30 bg-accent-red/5 px-8 py-3 flex items-center gap-2">
+            <div className="border-b border-accent-red/30 bg-accent-red/5 px-4 sm:px-8 py-3 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-accent-red flex-shrink-0" />
               <span className="text-sm text-accent-red">{error}</span>
             </div>
@@ -319,7 +320,7 @@ export default function ReviewPage() {
           {/* Main content: Band Feed + Clause List */}
           <div className="grid lg:grid-cols-5 grid-cols-1">
             {/* Band Agent Feed */}
-            <div className="lg:col-span-3 border-r border-border-subtle">
+            <div className="lg:col-span-3 lg:border-r border-b lg:border-b-0 border-border-subtle">
               <div className="border-b border-border-subtle px-4 py-3 bg-bg-surface-2 flex items-center justify-between">
                 <span className="font-mono text-xs text-text-muted">
                   BAND_ROOM — live agent feed
@@ -330,7 +331,7 @@ export default function ReviewPage() {
               </div>
               <div
                 ref={feedRef}
-                className="h-[500px] overflow-y-auto p-4 space-y-2 font-mono text-code"
+                className="h-[350px] sm:h-[500px] overflow-y-auto p-4 space-y-2 font-mono text-code"
               >
                 <AnimatePresence>
                   {events.map((event) => (
@@ -406,7 +407,7 @@ export default function ReviewPage() {
                   EXTRACTED_CLAUSES — {clauses.length} found
                 </span>
               </div>
-              <div className="h-[500px] overflow-y-auto">
+              <div className="h-[350px] sm:h-[500px] overflow-y-auto">
                 <AnimatePresence>
                   {clauses.map((clause, i) => (
                     <motion.div

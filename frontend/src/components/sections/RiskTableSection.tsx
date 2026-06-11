@@ -40,7 +40,7 @@ export default function RiskTableSection() {
 					<CornerGlow color="#fbbf24" position="bottom-right" opacity={0.15}>
 						<div className="grid lg:grid-cols-5 grid-cols-1">
 							{/* Left: Summary */}
-							<div className="lg:col-span-2 flex flex-col items-start gap-6 p-8 lg:p-12">
+							<div className="lg:col-span-2 flex flex-col items-start gap-6 p-4 sm:p-8 lg:p-12">
 								<span className="font-mono text-xs text-text-secondary tracking-wider uppercase">Risk Intelligence</span>
 								<h2 className="text-heading text-balance">Live compliance posture, clause by clause.</h2>
 								<p className="text-body text-text-secondary text-balance">Every requirement mapped against its regulation, scored for risk, and measured for confidence. No fluff.</p>
@@ -78,7 +78,7 @@ export default function RiskTableSection() {
 									<span className="font-mono text-xs text-text-muted">risk_matrix — 4 requirements evaluated</span>
 								</div>
 								<div className="overflow-x-auto">
-									<table className="w-full text-left">
+									<table className="w-full min-w-[540px] text-left">
 										<thead>
 											<tr className="border-b border-border-subtle bg-bg-surface-3">
 												<th className="px-4 py-2.5 font-mono text-xs text-text-muted font-normal">REQUIREMENT_ID</th>
