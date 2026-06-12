@@ -30,7 +30,7 @@ export interface ReportFinding {
   id: string;
   clauseText: string;
   category: string;
-  severity: 'CRITICAL' | 'MEDIUM' | 'LOW';
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
   status: 'VIOLATION' | 'WARNING' | 'COMPLIANT';
   regulation: string;
   article: string;

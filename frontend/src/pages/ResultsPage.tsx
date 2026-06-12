@@ -10,13 +10,13 @@ import type { ReviewResult, ReportFinding } from '../lib/api';
 // Fallback sample data when no real report is available
 const SAMPLE_FINDINGS: ReportFinding[] = [
   {
-    id: '1', clauseText: 'Vendor shall retain customer data for a period of 24 months post-termination.', category: 'Data Retention', severity: 'CRITICAL', status: 'VIOLATION', regulation: 'GDPR', article: 'Art. 5(1)(e)', reasoning: 'No deletion timeline specified. GDPR requires data retention to be limited to what is necessary for the stated purpose.', confidence: 96, humanReview: true,
+    id: '1', clauseText: 'Vendor shall retain customer data for a period of 24 months post-termination.', category: 'Data Retention', severity: 'HIGH', status: 'VIOLATION', regulation: 'GDPR', article: 'Art. 5(1)(e)', reasoning: 'No deletion timeline specified. GDPR requires data retention to be limited to what is necessary for the stated purpose.', confidence: 96, humanReview: true,
   },
   {
-    id: '2', clauseText: 'Total liability capped at 1x annual service fee.', category: 'Liability', severity: 'CRITICAL', status: 'VIOLATION', regulation: 'OJK POJK 12/2018', article: 'Art. 23', reasoning: 'Liability cap of 1x annual fee is insufficient for data breach scenarios per OJK regulations.', confidence: 94, humanReview: true,
+    id: '2', clauseText: 'Total liability capped at 1x annual service fee.', category: 'Liability', severity: 'HIGH', status: 'VIOLATION', regulation: 'OJK POJK 12/2018', article: 'Art. 23', reasoning: 'Liability cap of 1x annual fee is insufficient for data breach scenarios per OJK regulations.', confidence: 94, humanReview: true,
   },
   {
-    id: '3', clauseText: 'Vendor may engage subprocessors without prior written consent.', category: 'Subprocessor', severity: 'CRITICAL', status: 'VIOLATION', regulation: 'GDPR', article: 'Art. 28(2)', reasoning: 'GDPR requires prior written authorization before engaging subprocessors.', confidence: 97, humanReview: true,
+    id: '3', clauseText: 'Vendor may engage subprocessors without prior written consent.', category: 'Subprocessor', severity: 'HIGH', status: 'VIOLATION', regulation: 'GDPR', article: 'Art. 28(2)', reasoning: 'GDPR requires prior written authorization before engaging subprocessors.', confidence: 97, humanReview: true,
   },
   {
     id: '4', clauseText: 'Either party may terminate with 30 days written notice.', category: 'Termination', severity: 'MEDIUM', status: 'WARNING', regulation: 'OJK POJK 38/2020', article: 'Art. 15', reasoning: '30-day termination notice may be insufficient for orderly data migration and deletion.', confidence: 82, humanReview: false,
@@ -57,7 +57,7 @@ export default function ResultsPage() {
   const regulations = state?.regulations || ['gdpr', 'ojk'];
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [filterSeverity, setFilterSeverity] = useState<'ALL' | 'CRITICAL' | 'MEDIUM' | 'LOW'>('ALL');
+  const [filterSeverity, setFilterSeverity] = useState<'ALL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
   const [reportData, setReportData] = useState<ReviewResult | null>(state?.result || null);
   const [loading, setLoading] = useState(!state?.result && !!sessionId);
 
@@ -74,7 +74,7 @@ export default function ResultsPage() {
   const report = reportData?.report;
   const FINDINGS: ReportFinding[] = report?.findings || SAMPLE_FINDINGS;
 
-  const critical = FINDINGS.filter(f => f.severity === 'CRITICAL').length;
+  const critical = FINDINGS.filter(f => f.severity === 'HIGH').length;
   const medium = FINDINGS.filter(f => f.severity === 'MEDIUM').length;
   const low = FINDINGS.filter(f => f.severity === 'LOW').length;
 
@@ -197,7 +197,7 @@ export default function ResultsPage() {
                   }`}>{overallRisk}</div>
                 </div>
                 <div className="border border-border-subtle p-4">
-                  <div className="font-mono text-xs text-text-muted mb-2">CRITICAL</div>
+                  <div className="font-mono text-xs text-text-muted mb-2">HIGH</div>
                   <div className="text-2xl font-semibold text-accent-red">{critical}</div>
                   <div className="font-mono text-[10px] text-text-muted">VIOLATIONS</div>
                 </div>
@@ -275,7 +275,7 @@ export default function ResultsPage() {
                       <td className="px-4 py-3 text-sm text-text-secondary">{f.category}</td>
                       <td className="px-4 py-3">
                         <span className={`badge text-[10px] ${
-                          f.severity === 'CRITICAL' ? 'bg-accent-red/10 text-accent-red border-accent-red/20' :
+                          f.severity === 'HIGH' ? 'bg-accent-red/10 text-accent-red border-accent-red/20' :
                           f.severity === 'MEDIUM' ? 'bg-accent-amber/10 text-accent-amber border-accent-amber/20' :
                           'bg-accent-emerald/10 text-accent-emerald border-accent-emerald/20'
                         }`}>
@@ -314,7 +314,7 @@ export default function ResultsPage() {
                 CLAUSE_ANALYSIS — detailed findings
               </span>
               <div className="flex gap-1">
-                {(['ALL', 'CRITICAL', 'MEDIUM', 'LOW'] as const).map(sev => (
+                {(['ALL', 'HIGH', 'MEDIUM', 'LOW'] as const).map(sev => (
                   <button
                     key={sev}
                     onClick={() => setFilterSeverity(sev)}
@@ -342,7 +342,7 @@ export default function ResultsPage() {
                       className="w-full px-4 sm:px-6 py-4 flex items-center gap-3 sm:gap-4 text-left hover:bg-bg-surface-2/30 transition-colors"
                     >
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        finding.severity === 'CRITICAL' ? 'bg-accent-red' :
+                        finding.severity === 'HIGH' ? 'bg-accent-red' :
                         finding.severity === 'MEDIUM' ? 'bg-accent-amber' :
                         'bg-accent-emerald'
                       }`} />
@@ -351,7 +351,7 @@ export default function ResultsPage() {
                           <span className="font-mono text-xs text-accent-blue">{finding.id}</span>
                           <span className="font-mono text-xs text-text-muted">{finding.category}</span>
                           <span className={`badge text-[10px] ml-auto ${
-                            finding.severity === 'CRITICAL' ? 'bg-accent-red/10 text-accent-red border-accent-red/20' :
+                            finding.severity === 'HIGH' ? 'bg-accent-red/10 text-accent-red border-accent-red/20' :
                             finding.severity === 'MEDIUM' ? 'bg-accent-amber/10 text-accent-amber border-accent-amber/20' :
                             'bg-accent-emerald/10 text-accent-emerald border-accent-emerald/20'
                           }`}>

@@ -150,7 +150,7 @@ export function downloadPDF(result: ReviewResult, fileName: string): void {
 
   const severityColor = (s: string) => {
     switch (s) {
-      case 'CRITICAL': return '#ef4444';
+      case 'HIGH': return '#ef4444';
       case 'MEDIUM': return '#f59e0b';
       case 'LOW': return '#10b981';
       default: return '#6b7280';
@@ -215,7 +215,7 @@ export function downloadPDF(result: ReviewResult, fileName: string): void {
   <div class="summary-grid">
     <div class="summary-card">
       <div class="label">Overall Risk</div>
-      <div class="value" style="color: ${severityColor(report.overallRisk === 'HIGH' ? 'CRITICAL' : report.overallRisk === 'MEDIUM' ? 'MEDIUM' : 'LOW')}">${report.overallRisk}</div>
+      <div class="value" style="color: ${severityColor(report.overallRisk)}">${report.overallRisk}</div>
     </div>
     <div class="summary-card">
       <div class="label">Critical</div>

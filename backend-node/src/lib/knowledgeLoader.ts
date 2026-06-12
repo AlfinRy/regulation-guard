@@ -25,6 +25,16 @@ const REGULATION_FILE_MAP: Record<string, string> = {
 };
 
 /**
+ * Per-file section aliases: when a requested section doesn't exist,
+ * try these fallbacks. E.g. ISO27001 uses "controls" instead of "articles".
+ */
+const SECTION_ALIASES: Record<string, Record<string, string>> = {
+  iso27001: {
+    articles: 'controls',
+  },
+};
+
+/**
  * Load one or more sections from a knowledge file.
  * Returns empty string if file or section not found (graceful degradation).
  */
@@ -53,11 +63,18 @@ export async function loadKnowledgeSection(
   const extracted: string[] = [];
 
   for (const section of sections) {
-    const startTag = `<!-- section: ${section} -->`;
+    // Resolve alias if the section doesn't exist directly
+    let resolvedSection = section;
+    const aliases = SECTION_ALIASES[fileName];
+    if (aliases && aliases[section]) {
+      resolvedSection = aliases[section];
+    }
+
+    const startTag = `<!-- section: ${resolvedSection} -->`;
     const endTag = `<!-- /section -->`;
     const start = content.indexOf(startTag);
     if (start === -1) {
-      console.warn(`[Knowledge] Section "${section}" not found in ${fileName}.md`);
+      console.warn(`[Knowledge] Section "${resolvedSection}" not found in ${fileName}.md`);
       continue;
     }
     const end = content.indexOf(endTag, start);
