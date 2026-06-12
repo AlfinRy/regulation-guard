@@ -1,18 +1,34 @@
 /**
- * Node.js server entry point (for local development).
- * Uses @hono/node-server to serve the Hono app.
+ * Cloudflare Workers entry point for RegulationGuard API.
  *
- * For Cloudflare Workers deployment, use worker.ts instead.
+ * This file exports the Hono app directly for Workers runtime.
+ * The Node.js entry point (index.ts) uses @hono/node-server instead.
+ *
+ * On Workers, the ASSETS binding provides access to knowledge files
+ * without needing filesystem access.
  */
 
-import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { reviewRoutes } from './routes/review.js';
 import { validateRoutes } from './routes/validate.js';
+import { setAssetsBinding } from './lib/knowledgeLoader.js';
 
-const app = new Hono();
+type Bindings = {
+  ENVIRONMENT: string;
+  ASSETS: Fetcher;
+};
+
+const app = new Hono<{ Bindings: Bindings }>();
+
+// Inject ASSETS binding into knowledgeLoader before each request
+app.use('*', async (c, next) => {
+  if (c.env.ASSETS) {
+    setAssetsBinding(c.env.ASSETS);
+  }
+  await next();
+});
 
 // Middleware
 app.use('*', cors({
@@ -35,7 +51,11 @@ app.use('*', logger());
 
 // Health check
 app.get('/api/health', (c) => {
-  return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+  return c.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: c.env.ENVIRONMENT || 'development',
+  });
 });
 
 // Routes
@@ -47,12 +67,4 @@ app.notFound((c) => {
   return c.json({ error: 'Not found' }, 404);
 });
 
-// Start server
-const PORT = parseInt(process.env.PORT || '3001', 10);
-
-serve({
-  fetch: app.fetch,
-  port: PORT,
-}, (info) => {
-  console.log(`[regulation-guard] Node.js backend running on http://localhost:${info.port}`);
-});
+export default app;

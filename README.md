@@ -1,84 +1,80 @@
 # RegulationGuard
 
-Multi-Agent Compliance & Regulatory Review System.
+> **From contract to compliance report in minutes, not weeks.**
 
-> *"From contract to compliance report in minutes, not weeks."*
+Multi-Agent Compliance & Regulatory Review System yang menggunakan 4 AI agents untuk mereview dokumen kontrak terhadap regulasi (GDPR, OJK, PDPA, ISO 27001).
 
-Band of Agents Hackathon · lablab.ai · Track 3 — Regulated & High-Stakes Workflows
+**Band of Agents Hackathon · lablab.ai · Track 3 — Regulated & High-Stakes Workflows**
 
-## Monorepo Structure
-
-```
-regulation-guard/
-├── frontend/           # React 18 + TypeScript + Vite + Tailwind CSS
-├── backend-node/       # Node.js + Hono + AI SDK (BYOK, LLM calls, PDF parsing)
-├── backend-band/       # Python + FastAPI + Band SDK (agent orchestration)
-├── documentation/      # PRD, status docs
-├── docker-compose.yml  # Run all services locally
-└── README.md
-```
-
-## Quick Start
+## Quick Start (Local)
 
 ### 1. Frontend
-
 ```bash
-cd frontend
-npm install
-npm run dev
+cd frontend && npm install && npm run dev
 # → http://localhost:5173
 ```
 
-### 2. Node.js Backend
-
+### 2. Backend
 ```bash
-cd backend-node
-npm install
-npm run dev
+cd backend-node && npm install && npm run dev
 # → http://localhost:3001
 ```
 
-### 3. Python Band Service
-
+### 3. Band Service (opsional)
 ```bash
-cd backend-band
-pip install -r requirements.txt
-python main.py
+cd backend-band && pip install -r requirements.txt && python main.py
 # → http://localhost:8001
 ```
 
-### 4. All services (Docker)
+## Deploy ke Cloudflare
+
+Lihat [documentation/DEPLOYMENT.md](./documentation/DEPLOYMENT.md) untuk panduan lengkap.
+
+### Quick Deploy
 
 ```bash
-docker-compose up
+# 1. Deploy backend Worker
+cd backend-node
+npx wrangler login
+npx wrangler deploy
+
+# 2. Deploy frontend Pages
+cd frontend
+echo "VITE_API_URL=https://regulation-guard-api.YOUR-SUB.workers.dev" > .env.production
+npm run build
+npx wrangler pages deploy ./dist --project-name=regulation-guard
 ```
 
-## Architecture
+## Arsitektur
 
 ```
-┌──────────────────────────────────────────────┐
-│           FRONTEND (React + Vite)             │
-│   Upload UI, BYOK Settings, Live Dashboard    │
-└────────────────────┬─────────────────────────┘
-                     │ HTTP / SSE
-┌────────────────────▼─────────────────────────┐
-│        NODE.JS BACKEND (Hono + AI SDK)        │
-│   REST API, BYOK, PDF parsing, Agent LLM      │
-└────────────────────┬─────────────────────────┘
-                     │ Internal HTTP
-┌────────────────────▼─────────────────────────┐
-│       PYTHON BAND SERVICE (FastAPI + Band)    │
-│   Band SDK rooms, agent message passing        │
-└──────────────────────────────────────────────┘
+Frontend (Pages)  →  Worker API  →  AI Provider (BYOK)
+    React/Vite       Hono/AI SDK     13 providers
+                      + Knowledge
 ```
 
-## BYOK — Bring Your Own Key
+4 Agents berjalan secara sequential:
+1. **Policy Reader** — Extract clauses
+2. **Risk Analyzer** — Score risk severity
+3. **Legal Cross-Checker** — Cross-reference regulations
+4. **Compliance Reporter** — Generate audit report
 
-Users provide their own API key. Supports 13 providers:
+## Features
 
-Anthropic, DeepSeek, OpenAI, OpenRouter, Ollama, Groq, Mistral, Together AI, Fireworks AI, Google Gemini, xAI Grok, Z.AI, Z.AI Coding
+- ✅ BYOK (Bring Your Own Key) — 13 AI providers
+- ✅ PDF & DOCX parsing
+- ✅ Real-time SSE streaming
+- ✅ Knowledge injection (lightweight RAG)
+- ✅ Export PDF & Markdown
+- ✅ Cloudflare Workers & Pages deployment
 
-Keys are stored in browser localStorage and sent via HTTP headers. Never written to any database.
+## Documentation
+
+- [PRD v2](./documentation/PRDv2.md) — Product requirements
+- [STATUS](./documentation/STATUS.md) — Build status & features
+- [DEPLOYMENT](./documentation/DEPLOYMENT.md) — Cloudflare deployment guide
+- [AGENTS_IMPROVEMENT](./documentation/AGENTS_IMPROVEMENT.md) — Agent improvement tasks
+- [KNOWLEDGE_INJECTION](./documentation/KNOWLEDGE_INJECTION.md) — RAG pattern docs
 
 ## License
 

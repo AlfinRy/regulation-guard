@@ -1,29 +1,34 @@
 /**
  * PDF and DOCX parsing utilities.
  * Extracts plain text from uploaded documents.
+ *
+ * Works on both Node.js and Cloudflare Workers (with nodejs_compat).
  */
 
-import fs from 'node:fs';
 import path from 'node:path';
 import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 
 /**
  * Parse a file buffer based on its extension.
+ * Accepts Buffer (Node.js) or ArrayBuffer (Workers).
  * Returns extracted plain text.
  */
 export async function parseDocument(
-  buffer: Buffer,
+  buffer: Buffer | ArrayBuffer,
   filename: string,
 ): Promise<string> {
   const ext = path.extname(filename).toLowerCase();
 
+  // Ensure we have a Buffer for pdf-parse and mammoth
+  const buf = buffer instanceof ArrayBuffer ? Buffer.from(buffer) : buffer;
+
   if (ext === '.pdf') {
-    return parsePdf(buffer);
+    return parsePdf(buf);
   }
 
   if (ext === '.docx') {
-    return parseDocx(buffer);
+    return parseDocx(buf);
   }
 
   throw new Error(`Unsupported file format: ${ext}. Only PDF and DOCX are accepted.`);
@@ -37,11 +42,4 @@ async function parsePdf(buffer: Buffer): Promise<string> {
 async function parseDocx(buffer: Buffer): Promise<string> {
   const result = await mammoth.extractRawText({ buffer });
   return result.value;
-}
-
-/**
- * Read a file from disk (used for testing).
- */
-export function readFileBuffer(filePath: string): Buffer {
-  return fs.readFileSync(filePath);
 }

@@ -4,7 +4,7 @@
  * Generates downloadable Markdown and PDF files from the report data.
  */
 
-import type { ReviewResult, ReportFinding } from './api';
+import type { ReviewResult } from './api';
 
 // ---------------------------------------------------------------------------
 // Markdown Export

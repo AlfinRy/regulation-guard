@@ -9,6 +9,8 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { v4 as uuid } from 'uuid';
+
+// crypto.randomUUID() is available in Workers, but uuid is needed for nodejs_compat consistency
 import { createModel } from '../lib/aiClient.js';
 import { parseDocument } from '../lib/pdfParser.js';
 import { createBandRoom, sendBandMessage, closeBandRoom } from '../lib/bandClient.js';

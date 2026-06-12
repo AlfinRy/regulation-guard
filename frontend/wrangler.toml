@@ -1,0 +1,9 @@
+# Frontend — Cloudflare Pages configuration
+# Build output directory for Cloudflare Pages deployment
+
+$schema: ./node_modules/wrangler/config-schema.json
+
+# Cloudflare Pages uses wrangler pages deploy, not this file.
+# This file is for local development with `npx wrangler pages dev`.
+
+# See package.json scripts for deployment commands.

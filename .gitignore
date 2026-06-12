@@ -49,3 +49,17 @@ coverage/
 # ─── Build Artifacts ────────────────────
 *.tgz
 *.tar.gz
+
+# ─── Wrangler / Cloudflare ──────────────
+.wrangler/
+.dev.vars
+
+# ─── AI Agent Context (not for repo) ────
+AGENTS.md
+
+# ─── Documentation (internal only) ──────
+documentation/
+
+# ─── Generated Assets (source only) ─────
+# Favicon originals already copied to frontend/public/
+favicon_io/

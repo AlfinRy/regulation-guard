@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "pages:dev": "npx wrangler pages dev ./dist --proxy 5173",
+    "pages:deploy": "npm run build && npx wrangler pages deploy ./dist --project-name=regulation-guard"
   },
   "dependencies": {
     "@paper-design/shaders-react": "^0.0.76",
