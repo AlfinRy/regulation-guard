@@ -7,9 +7,14 @@
  */
 
 import path from 'node:path';
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
-import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import mammoth from 'mammoth';
+
+// pdfjs-dist setup — disable worker for serverless/edge environments
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+
+// Set dummy worker source to suppress "No GlobalWorkerOptions.workerSrc" error.
+// We don't use Web Workers — PDF parsing runs on the main thread.
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 /**
  * Parse a file buffer based on its extension.
@@ -39,14 +44,14 @@ export async function parseDocument(
 }
 
 async function parsePdf(data: Uint8Array): Promise<string> {
-  const doc = await getDocument({ data, useSystemFonts: true }).promise;
+  const doc = await pdfjsLib.getDocument({ data, useSystemFonts: true }).promise;
   const pages: string[] = [];
 
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
     const text = content.items
-      .filter((item): item is TextItem => 'str' in item)
+      .filter((item): item is typeof item & { str: string } => 'str' in item)
       .map((item) => item.str)
       .join(' ');
     pages.push(text);
