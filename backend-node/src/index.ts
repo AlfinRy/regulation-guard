@@ -9,7 +9,18 @@ const app = new Hono();
 
 // Middleware
 app.use('*', cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+  origin: (origin) => {
+    const allowed = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:3000',
+    ];
+    if (!origin) return origin;
+    if (allowed.includes(origin)) return origin;
+    if (origin.endsWith('.pages.dev')) return origin;
+    if (origin.endsWith('.onrender.com')) return origin;
+    return '';
+  },
   allowMethods: ['GET', 'POST', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'X-API-Key', 'X-Provider-URL', 'X-Model-Name'],
 }));

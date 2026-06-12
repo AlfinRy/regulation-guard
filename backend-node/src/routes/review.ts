@@ -16,7 +16,7 @@ import { runPolicyReader } from '../agents/policyReader.js';
 import { runRiskAnalyzer } from '../agents/riskAnalyzer.js';
 import { runLegalChecker } from '../agents/legalChecker.js';
 import { runReporter } from '../agents/reporter.js';
-import type { ComplianceReport } from '../agents/reporter.js';
+import type { ComplianceReport, ReporterMetadata } from '../agents/reporter.js';
 
 export const reviewRoutes = new Hono();
 
@@ -273,7 +273,7 @@ async function runPipeline(
 
   // Agent 2: Risk Analyzer
   pushEvent('AGENT_02', 'risk_analysis_result', 'Risk analysis started. Scoring clauses by severity...');
-  const scoredClauses = await runRiskAnalyzer(model, clauses);
+  const scoredClauses = await runRiskAnalyzer(model, clauses, regulations);
   const highCount = scoredClauses.filter(c => c.severity === 'HIGH').length;
   const medCount = scoredClauses.filter(c => c.severity === 'MEDIUM').length;
   pushEvent('AGENT_02', 'risk_analysis_result', `Risk analysis complete. ${highCount} HIGH, ${medCount} MEDIUM, ${scoredClauses.length - highCount - medCount} LOW.`);
@@ -292,7 +292,14 @@ async function runPipeline(
 
   // Agent 4: Compliance Reporter
   pushEvent('AGENT_04', 'final_report', 'Generating compliance report...');
-  const report = await runReporter(model, clauses, scoredClauses, legalFindings);
+  const reporterMetadata: ReporterMetadata = {
+    sessionId,
+    documentName: fileName,
+    regulations,
+    provider: aiConfig.providerUrl,
+    model: aiConfig.modelName,
+  };
+  const report = await runReporter(model, clauses, scoredClauses, legalFindings, reporterMetadata);
   pushEvent('AGENT_04', 'final_report', `Report generated. Overall risk: ${report.overallRisk}. ${report.criticalCount} critical, ${report.warningCount} warnings.`);
   await sendToBand('final_report', 'AGENT_04', report);
 

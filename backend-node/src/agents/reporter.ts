@@ -2,6 +2,13 @@
  * Agent 4 — Compliance Reporter
  *
  * Synthesizes all previous agent outputs into a final structured report.
+ *
+ * Improvements applied:
+ * - Preserves Agent 3 reasoning verbatim (no summarization)
+ * - Severity uses HIGH (not CRITICAL) consistently with Agent 2
+ * - Cleaner tryRepairJSON — truncate at last complete finding object
+ * - Includes metadata (sessionId, provider, regulations, timestamp)
+ * - Exports reportToMarkdown() utility
  */
 
 import { generateText } from 'ai';
@@ -9,6 +16,7 @@ import type { LanguageModelV1 } from 'ai';
 import type { ExtractedClause } from './policyReader.js';
 import type { RiskScoredClause } from './riskAnalyzer.js';
 import type { CrossCheckFinding } from './legalChecker.js';
+import { parseJSONObject } from '../lib/parseJSON.js';
 
 const SYSTEM_PROMPT = `You are a compliance report generator AI. You receive the outputs of three previous agents (clause extraction, risk analysis, legal cross-check) and must synthesize them into a single structured compliance report.
 
@@ -16,14 +24,15 @@ Rules:
 1. Generate a report with:
    - overallRisk: HIGH, MEDIUM, or LOW
    - summary: a 2-3 sentence executive summary
-   - recommendation: a clear actionable recommendation (e.g., "Do not sign without amendments to clauses X, Y, Z")
+   - recommendation: a clear actionable recommendation
    - criticalCount: number of VIOLATION findings
    - warningCount: number of WARNING findings
    - passingCount: number of COMPLIANT findings
    - findings: array of all findings merged with clause text
 2. Each finding should include the original clause text, risk reasoning, and legal cross-check result.
-3. Return ONLY valid JSON. No markdown, no code fences.
-4. Be concise with reasoning text — keep each one to 1-2 sentences.
+3. For each finding, use the reasoning from the legal cross-check findings VERBATIM. Do not summarize or shorten it. Only the executive summary should be your own words.
+4. Return ONLY valid JSON. No markdown, no code fences.
+5. severity must be one of: HIGH, MEDIUM, or LOW (never use CRITICAL).
 
 Example output:
 {
@@ -38,7 +47,7 @@ Example output:
       "id": "CL_002",
       "clauseText": "...",
       "category": "Data Retention",
-      "severity": "CRITICAL",
+      "severity": "HIGH",
       "status": "VIOLATION",
       "regulation": "GDPR",
       "article": "Art. 5(1)(e)",
@@ -53,7 +62,7 @@ export interface ReportFinding {
   id: string;
   clauseText: string;
   category: string;
-  severity: 'CRITICAL' | 'MEDIUM' | 'LOW';
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
   status: 'VIOLATION' | 'WARNING' | 'COMPLIANT';
   regulation: string;
   article: string;
@@ -70,54 +79,74 @@ export interface ComplianceReport {
   warningCount: number;
   passingCount: number;
   findings: ReportFinding[];
+  metadata?: {
+    sessionId: string;
+    documentName: string;
+    regulations: string[];
+    provider: string;
+    model: string;
+    generatedAt: string;
+  };
 }
 
 /**
- * Attempt to repair truncated JSON by closing open structures.
+ * Attempt to repair truncated JSON by finding the last complete finding object.
  */
 function tryRepairJSON(raw: string): ComplianceReport | null {
-  // Strip markdown fences
-  let json = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  const json = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
-  // If it parses as-is, great
-  try { return JSON.parse(json); } catch { /* continue */ }
-
-  // Try progressively: find the last complete object in the findings array
-  // by closing open brackets/braces
-  for (let trimFrom = json.length; trimFrom > 10; trimFrom--) {
-    const partial = json.slice(0, trimFrom);
-
-    // Find last complete finding object (closing })
-    const lastBrace = partial.lastIndexOf('}');
-    if (lastBrace === -1) continue;
-
-    let candidate = partial.slice(0, lastBrace + 1);
-
-    // Count open vs close for [ and {
-    const opens = (candidate.match(/[\[{]/g) || []).length;
-    const closes = (candidate.match(/[\]}]/g) || []).length;
-    const diff = opens - closes;
-
-    // Close what's open
-    candidate += ']'.repeat(diff);
-    candidate += '}'.repeat(1);
-
-    try {
-      const parsed = JSON.parse(candidate);
-      if (parsed.overallRisk && parsed.findings && Array.isArray(parsed.findings)) {
-        console.log(`[Agent 4] Repaired JSON: recovered ${parsed.findings.length} findings`);
-        // Recount since some findings may have been dropped
-        parsed.criticalCount = parsed.findings.filter((f: ReportFinding) => f.status === 'VIOLATION').length;
-        parsed.warningCount = parsed.findings.filter((f: ReportFinding) => f.status === 'WARNING').length;
-        parsed.passingCount = parsed.findings.filter((f: ReportFinding) => f.status === 'COMPLIANT').length;
-        return parsed as ComplianceReport;
-      }
-    } catch {
-      continue;
+  // Try parsing as-is first
+  try {
+    const parsed = JSON.parse(json);
+    if (parsed?.overallRisk && Array.isArray(parsed?.findings)) {
+      return parsed as ComplianceReport;
     }
+  } catch {
+    /* continue */
+  }
+
+  // Find the last complete finding entry boundary
+  const lastCompleteEntry = Math.max(
+    json.lastIndexOf('},\n  {'),
+    json.lastIndexOf('},\n{'),
+    json.lastIndexOf('}\n  ]'),
+    json.lastIndexOf('}\n]'),
+  );
+
+  if (lastCompleteEntry === -1) return null;
+
+  // Truncate after the last complete object and close the structures
+  const truncated = json.slice(0, lastCompleteEntry + 1) + '\n  ]\n}';
+
+  try {
+    const parsed = JSON.parse(truncated);
+    if (parsed?.overallRisk && Array.isArray(parsed?.findings)) {
+      // Recount based on recovered findings
+      parsed.criticalCount = parsed.findings.filter(
+        (f: ReportFinding) => f.status === 'VIOLATION',
+      ).length;
+      parsed.warningCount = parsed.findings.filter(
+        (f: ReportFinding) => f.status === 'WARNING',
+      ).length;
+      parsed.passingCount = parsed.findings.filter(
+        (f: ReportFinding) => f.status === 'COMPLIANT',
+      ).length;
+      console.log(`[Agent 4] Repaired JSON: recovered ${parsed.findings.length} findings`);
+      return parsed as ComplianceReport;
+    }
+  } catch {
+    /* fall through */
   }
 
   return null;
+}
+
+export interface ReporterMetadata {
+  sessionId: string;
+  documentName: string;
+  regulations: string[];
+  provider: string;
+  model: string;
 }
 
 export async function runReporter(
@@ -125,7 +154,12 @@ export async function runReporter(
   clauses: ExtractedClause[],
   scoredClauses: RiskScoredClause[],
   legalFindings: CrossCheckFinding[],
+  metadata?: ReporterMetadata,
 ): Promise<ComplianceReport> {
+  const metadataContext = metadata
+    ? `\n\nReport metadata: sessionId=${metadata.sessionId}, document="${metadata.documentName}", regulations=[${metadata.regulations.join(', ')}], provider=${metadata.provider}, model=${metadata.model}.`
+    : '';
+
   const { text } = await generateText({
     model,
     system: SYSTEM_PROMPT,
@@ -138,21 +172,105 @@ Risk analysis:
 ${JSON.stringify(scoredClauses, null, 2)}
 
 Legal cross-check findings:
-${JSON.stringify(legalFindings, null, 2)}`,
+${JSON.stringify(legalFindings, null, 2)}
+${metadataContext}`,
     maxTokens: 8000,
-    abortSignal: AbortSignal.timeout(300_000),
+    abortSignal: AbortSignal.timeout(180_000),
   });
 
+  let report: ComplianceReport;
+
   try {
-    const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const report: ComplianceReport = JSON.parse(cleaned);
-    return report;
+    report = parseJSONObject<ComplianceReport>(text, 'Agent 4');
   } catch {
     console.error('[Agent 4] Failed to parse report response. Attempting repair...');
     const repaired = tryRepairJSON(text);
-    if (repaired) return repaired;
-
-    console.error('[Agent 4] Repair failed. Raw response:', text.slice(0, 300));
-    throw new Error('Agent 4 (Compliance Reporter) failed. The model response was not valid JSON.');
+    if (repaired) {
+      report = repaired;
+    } else {
+      console.error('[Agent 4] Repair failed. Raw response:', text.slice(0, 300));
+      throw new Error('Agent 4 (Compliance Reporter) failed. The model response was not valid JSON.');
+    }
   }
+
+  // Attach metadata (not generated by LLM, added programmatically)
+  if (metadata) {
+    report.metadata = {
+      sessionId: metadata.sessionId,
+      documentName: metadata.documentName,
+      regulations: metadata.regulations,
+      provider: metadata.provider,
+      model: metadata.model,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  return report;
+}
+
+// ─── Markdown Export Utility ─────────────────────────────
+
+export function reportToMarkdown(report: ComplianceReport): string {
+  const lines: string[] = [];
+
+  lines.push('# Compliance Audit Report');
+  lines.push('');
+
+  // Metadata section
+  if (report.metadata) {
+    lines.push('## Report Metadata');
+    lines.push('');
+    lines.push(`- **Session ID**: ${report.metadata.sessionId}`);
+    lines.push(`- **Document**: ${report.metadata.documentName}`);
+    lines.push(`- **Regulations**: ${report.metadata.regulations.join(', ')}`);
+    lines.push(`- **AI Provider**: ${report.metadata.provider}`);
+    lines.push(`- **Model**: ${report.metadata.model}`);
+    lines.push(`- **Generated At**: ${report.metadata.generatedAt}`);
+    lines.push('');
+  }
+
+  // Executive Summary
+  lines.push('## Executive Summary');
+  lines.push('');
+  lines.push(`**Overall Risk Level**: ${report.overallRisk}`);
+  lines.push('');
+  lines.push(report.summary);
+  lines.push('');
+  lines.push(`**Recommendation**: ${report.recommendation}`);
+  lines.push('');
+
+  // Risk Matrix
+  lines.push('## Risk Matrix');
+  lines.push('');
+  lines.push(`| Category | Count |`);
+  lines.push(`|----------|-------|`);
+  lines.push(`| ❌ Violations | ${report.criticalCount} |`);
+  lines.push(`| ⚠️ Warnings | ${report.warningCount} |`);
+  lines.push(`| ✅ Compliant | ${report.passingCount} |`);
+  lines.push('');
+
+  // Detailed Findings
+  lines.push('## Detailed Findings');
+  lines.push('');
+
+  for (const finding of report.findings) {
+    const statusIcon = finding.status === 'VIOLATION' ? '❌' : finding.status === 'WARNING' ? '⚠️' : '✅';
+    lines.push(`### ${statusIcon} ${finding.id} — ${finding.category}`);
+    lines.push('');
+    lines.push(`- **Status**: ${finding.status}`);
+    lines.push(`- **Severity**: ${finding.severity}`);
+    lines.push(`- **Regulation**: ${finding.regulation}`);
+    lines.push(`- **Article**: ${finding.article}`);
+    lines.push(`- **Confidence**: ${finding.confidence}%`);
+    lines.push(`- **Human Review Required**: ${finding.humanReview ? 'Yes' : 'No'}`);
+    lines.push('');
+    lines.push(`**Clause Text**: ${finding.clauseText}`);
+    lines.push('');
+    lines.push(`**Reasoning**: ${finding.reasoning}`);
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+  }
+
+  return lines.join('\n');
 }
