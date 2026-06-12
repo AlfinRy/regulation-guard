@@ -14,7 +14,8 @@
     "directory": "./knowledge",
     "binding": "ASSETS"
   },
-  "limits": {
-    "cpu_ms": 30000
-  }
+  // CPU limits only available on Paid plan
+  // "limits": {
+  //   "cpu_ms": 30000
+  // }
 }

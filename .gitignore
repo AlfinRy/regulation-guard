@@ -15,9 +15,9 @@ env/
 
 # ─── Environment & Secrets ──────────────
 .env
-.env.local
-.env.*.local
-*.local
+.env.*
+!.env.example
+!.env.*.example
 
 # ─── OS Generated ───────────────────────
 .DS_Store
