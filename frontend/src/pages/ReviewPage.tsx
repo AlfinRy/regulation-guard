@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { BookOpen, FileText, Lock, CheckCircle, ArrowRight, AlertTriangle } from 'lucide-react';
+import { BookOpen, FileText, Lock, CheckCircle, ArrowRight, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { streamReviewEvents, getReviewResult } from '../lib/api';
 import Logo from '../components/ui/Logo';
@@ -37,6 +37,9 @@ const AGENT_STEPS: AgentStep[] = [
   { id: 'AGENT_04', icon: CheckCircle, name: 'Compliance Reporter', label: 'AGENT_04', status: 'queued', progress: 0 },
 ];
 
+// Map event type to a phase weight (total = 100)
+// Used by getOverallProgress to weight progress
+
 function getAgentProgress(events: SSEEvent[]): AgentStep[] {
   const steps = AGENT_STEPS.map(s => ({ ...s }));
 
@@ -47,10 +50,8 @@ function getAgentProgress(events: SSEEvent[]): AgentStep[] {
     const step = steps[agentIdx];
 
     if (event.type === 'handoff') {
-      // Current agent complete
       step.status = 'complete';
       step.progress = 100;
-      // Next agent starts
       if (agentIdx + 1 < steps.length) {
         steps[agentIdx + 1].status = 'running';
         steps[agentIdx + 1].progress = 10;
@@ -59,14 +60,25 @@ function getAgentProgress(events: SSEEvent[]): AgentStep[] {
       step.status = event.type === 'complete' ? 'complete' : 'error';
       step.progress = event.type === 'complete' ? 100 : step.progress;
     } else {
-      // Regular message — mark agent as running
       if (step.status === 'queued') {
         step.status = 'running';
         step.progress = 10;
       }
-      // Incremental progress
       if (step.status === 'running' && step.progress < 90) {
         step.progress = Math.min(90, step.progress + 15);
+      }
+    }
+  }
+
+    // Also: when SYSTEM sends 'complete', mark any still-running agent as complete
+  if (events.length > 0) {
+    const lastEvent = events[events.length - 1];
+    if (lastEvent.agent === 'SYSTEM' && lastEvent.type === 'complete') {
+      for (const step of steps) {
+        if (step.status === 'running') {
+          step.status = 'complete';
+          step.progress = 100;
+        }
       }
     }
   }
@@ -79,15 +91,13 @@ function extractClausesFromEvents(events: SSEEvent[]): ClauseItem[] {
 
   for (const event of events) {
     if (event.agent === 'AGENT_01' && event.type === 'clause_extraction_result') {
-      // Try to extract clause count from message
       const match = event.content.match(/(\d+)\s+clause/i);
       if (match) {
         const count = parseInt(match[1], 10);
         const categories = ['Data', 'Liability', 'Payment', 'IP', 'Termination', 'Subprocessor', 'Audit', 'Confidentiality'];
         const severities: ClauseItem['severity'][] = ['HIGH', 'MEDIUM', 'LOW'];
 
-        // Generate placeholder clauses — real data comes from the final report
-        for (let i = 0; i < count; i++) {
+        for (let i = clauses.length; i < count; i++) {
           clauses.push({
             id: `CL_${String(i + 1).padStart(3, '0')}`,
             category: categories[i % categories.length],
@@ -100,6 +110,16 @@ function extractClausesFromEvents(events: SSEEvent[]): ClauseItem[] {
   }
 
   return clauses;
+}
+
+function getOverallProgress(agents: AgentStep[], events: SSEEvent[]): number {
+  // Base from agent progress
+  const agentTotal = agents.reduce((sum, a) => sum + a.progress, 0) / agents.length;
+
+  // Bonus from event count (more events = closer to done)
+  const eventBonus = Math.min(10, events.length * 0.5);
+
+  return Math.min(99, Math.round(agentTotal + eventBonus));
 }
 
 export default function ReviewPage() {
@@ -118,11 +138,13 @@ export default function ReviewPage() {
   const [allDone, setAllDone] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<ReviewResult | null>(null);
+  const [connecting, setConnecting] = useState(true);
 
   // Subscribe to SSE stream
   useEffect(() => {
     if (!sessionId) {
       setError('No session ID. Start a review from the Upload page.');
+      setConnecting(false);
       return;
     }
 
@@ -133,24 +155,23 @@ export default function ReviewPage() {
         for await (const event of streamReviewEvents(sessionId)) {
           if (cancelled) break;
 
-          setEvents(prev => [...prev, event]);
+          // First event received — no longer "connecting"
+          setConnecting(false);
 
-          // Update agent progress
-          setEvents(current => {
-            setAgents(getAgentProgress(current));
-            return current;
-          });
+          setEvents(prev => {
+            const updated = [...prev, event];
 
-          // Extract clauses
-          setEvents(current => {
-            setClauses(extractClausesFromEvents(current));
-            return current;
+            // Update agent progress from all events
+            setAgents(getAgentProgress(updated));
+
+            // Extract clauses
+            setClauses(extractClausesFromEvents(updated));
+
+            return updated;
           });
 
           if (event.type === 'complete') {
             setAllDone(true);
-
-            // Fetch the final result
             try {
               const res = await getReviewResult(sessionId);
               setResult(res);
@@ -165,6 +186,7 @@ export default function ReviewPage() {
         }
       } catch (err) {
         if (!cancelled) {
+          setConnecting(false);
           setError(err instanceof Error ? err.message : 'Stream connection failed.');
         }
       }
@@ -182,9 +204,9 @@ export default function ReviewPage() {
     }
   }, [events]);
 
-  const overallProgress = Math.round(agents.reduce((sum, a) => sum + a.progress, 0) / agents.length);
+  const overallProgress = allDone ? 100 : getOverallProgress(agents, events);
+  const runningAgent = agents.find(a => a.status === 'running');
 
-  // If no session, show error state
   if (!sessionId) {
     return (
       <div className="min-h-screen bg-bg-base flex items-center justify-center">
@@ -259,7 +281,32 @@ export default function ReviewPage() {
             </div>
           </div>
 
-          {/* Agent progress bar */}
+          {/* Overall progress bar */}
+          <div className="border-b border-border-subtle px-4 sm:px-8 py-3 bg-bg-surface">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-mono text-[10px] text-text-muted">
+                {allDone ? 'COMPLETE' : connecting ? 'CONNECTING' : runningAgent ? `${AGENT_MAP[runningAgent.id]?.label.toUpperCase() || 'PROCESSING'}` : 'INITIALIZING'}
+              </span>
+              <span className="font-mono text-[10px] text-text-muted">
+                {events.length} events
+              </span>
+            </div>
+            <div className="h-1.5 bg-bg-surface-4 w-full overflow-hidden">
+              <motion.div
+                className={`h-full transition-colors duration-300 ${
+                  allDone ? 'bg-accent-emerald' :
+                  error ? 'bg-accent-red' :
+                  connecting ? 'bg-accent-amber' :
+                  'bg-accent-cyan'
+                }`}
+                initial={{ width: 0 }}
+                animate={{ width: `${overallProgress}%` }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+              />
+            </div>
+          </div>
+
+          {/* Agent steps */}
           <div className="border-b border-border-subtle px-4 sm:px-8 py-4">
             <div className="flex items-center gap-1 sm:gap-3 overflow-x-auto">
               {agents.map((agent) => {
@@ -273,7 +320,7 @@ export default function ReviewPage() {
                         agent.status === 'error' ? 'text-accent-red' :
                         'text-text-muted'
                       }`} />
-                      <span className={`font-mono text-xs ${
+                      <span className={`font-mono text-xs truncate ${
                         agent.status === 'complete' ? 'text-text-secondary' :
                         agent.status === 'running' ? 'text-text-primary' :
                         'text-text-muted'
@@ -281,13 +328,13 @@ export default function ReviewPage() {
                         {agent.label}
                       </span>
                       {agent.status === 'running' && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
+                        <Loader2 className="w-3 h-3 text-accent-cyan animate-spin flex-shrink-0" />
                       )}
                       {agent.status === 'complete' && (
-                        <CheckCircle className="w-3 h-3 text-accent-emerald" />
+                        <CheckCircle className="w-3 h-3 text-accent-emerald flex-shrink-0" />
                       )}
                       {agent.status === 'error' && (
-                        <AlertTriangle className="w-3 h-3 text-accent-red" />
+                        <AlertTriangle className="w-3 h-3 text-accent-red flex-shrink-0" />
                       )}
                     </div>
                     <div className="h-1 bg-bg-surface-4 w-full">
@@ -334,12 +381,12 @@ export default function ReviewPage() {
                 className="h-[350px] sm:h-[500px] overflow-y-auto p-4 space-y-2 font-mono text-code"
               >
                 <AnimatePresence>
-                  {events.map((event) => (
+                  {events.map((event, idx) => (
                     <motion.div
-                      key={event.id || event.timestamp}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.2 }}
+                      key={event.id || idx}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.15 }}
                       className={`p-3 border border-border-subtle bg-bg-surface-2 ${
                         event.type === 'handoff' ? 'border-l-2 border-l-accent-amber' :
                         event.type === 'final_report' ? 'border-l-2 border-l-accent-emerald' :
@@ -353,7 +400,9 @@ export default function ReviewPage() {
                         }`}>
                           {event.agent}
                         </span>
-                        <span className="text-xs text-text-muted">{event.timestamp}</span>
+                        <span className="text-[10px] text-text-muted">
+                          {new Date(event.timestamp).toLocaleTimeString()}
+                        </span>
                         <span className="text-[10px] text-text-muted ml-auto">
                           {event.type}
                         </span>
@@ -365,28 +414,42 @@ export default function ReviewPage() {
                   ))}
                 </AnimatePresence>
 
-                {!allDone && !error && events.length > 0 && (
-                  <div className="flex items-center gap-2 p-3 text-text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
-                    <span className="text-xs">
-                      {agents.find(a => a.status === 'running')?.label || 'Processing'}...
-                    </span>
-                  </div>
-                )}
-
-                {events.length === 0 && !error && (
-                  <div className="flex items-center justify-center h-full text-text-muted">
+                {/* Connecting state */}
+                {connecting && (
+                  <div className="flex items-center justify-center h-32">
                     <div className="text-center">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse inline-block mb-3" />
-                      <p className="text-xs">Connecting to pipeline...</p>
+                      <Loader2 className="w-5 h-5 text-accent-cyan animate-spin mx-auto mb-3" />
+                      <p className="text-xs text-text-muted">Connecting to pipeline...</p>
+                      <p className="text-[10px] text-text-muted mt-1">Establishing SSE connection</p>
                     </div>
                   </div>
                 )}
 
+                {/* Active running indicator */}
+                {!allDone && !error && !connecting && events.length > 0 && (
+                  <div className="flex items-center gap-2 p-3 text-text-muted">
+                    <Loader2 className="w-3 h-3 text-accent-cyan animate-spin" />
+                    <span className="text-xs">
+                      {runningAgent ? `${AGENT_MAP[runningAgent.id]?.label || runningAgent.label} processing...` : 'Processing...'}
+                    </span>
+                  </div>
+                )}
+
+                {/* No events yet and not connecting (shouldn't happen normally) */}
+                {events.length === 0 && !connecting && !error && (
+                  <div className="flex items-center justify-center h-32 text-text-muted">
+                    <div className="text-center">
+                      <Loader2 className="w-5 h-5 text-accent-cyan animate-spin mx-auto mb-3" />
+                      <p className="text-xs">Starting pipeline...</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pipeline complete */}
                 {allDone && (
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
                     className="p-3 border border-accent-emerald/30 bg-accent-emerald/5"
                   >
                     <div className="flex items-center gap-2">
@@ -414,7 +477,7 @@ export default function ReviewPage() {
                       key={clause.id}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
+                      transition={{ delay: Math.min(i * 0.03, 0.3) }}
                       className="border-b border-border-subtle p-4 hover:bg-bg-surface-2/50 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -437,7 +500,7 @@ export default function ReviewPage() {
 
                 {clauses.length === 0 && (
                   <div className="flex items-center justify-center h-32 text-text-muted text-xs font-mono">
-                    Waiting for Agent 1 to extract clauses...
+                    {connecting ? 'Waiting for connection...' : 'Waiting for Agent 1 to extract clauses...'}
                   </div>
                 )}
               </div>

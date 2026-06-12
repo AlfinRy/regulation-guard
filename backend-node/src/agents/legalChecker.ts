@@ -100,7 +100,7 @@ ${JSON.stringify(riskContextBatch, null, 2)}`,
         system: 'You are a JSON repair assistant. Return ONLY valid JSON, no markdown, no explanation.',
         prompt: `Fix this invalid JSON array and return ONLY the corrected array:\n\n${text.slice(0, 4000)}`,
         maxTokens: 4000,
-        abortSignal: AbortSignal.timeout(60_000),
+        abortSignal: AbortSignal.timeout(120_000),
       });
       return parseJSONArray<CrossCheckFinding>(retryText, 'Agent 3 (retry)');
     } catch (retryErr) {

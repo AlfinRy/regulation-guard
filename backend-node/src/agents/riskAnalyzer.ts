@@ -65,7 +65,7 @@ export async function runRiskAnalyzer(
     system: systemPrompt,
     prompt: `Analyze the risk level of these clauses:\n\n${JSON.stringify(clauses, null, 2)}`,
     maxTokens: 6000,
-    abortSignal: AbortSignal.timeout(120_000),
+    abortSignal: AbortSignal.timeout(300_000),
   });
 
   const scored = parseJSONArray<RiskScoredClause>(text, 'Agent 2');

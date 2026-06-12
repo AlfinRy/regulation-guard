@@ -112,7 +112,7 @@ export async function runPolicyReader(
       system: SYSTEM_PROMPT,
       prompt: `Extract all clauses from the following document:\n\n${documentText}`,
       maxTokens: 6000,
-      abortSignal: AbortSignal.timeout(120_000),
+      abortSignal: AbortSignal.timeout(300_000),
     });
 
     return parseJSONArray<ExtractedClause>(text, 'Agent 1');
@@ -131,7 +131,7 @@ export async function runPolicyReader(
       system: SYSTEM_PROMPT + `\n\nNote: This is chunk ${i + 1} of ${chunks.length}. Extract all clauses from this chunk only. Start IDs from CL_${String(i * 50 + 1).padStart(3, '0')}.`,
       prompt: `Extract all clauses from the following document chunk:\n\n${chunks[i]}`,
       maxTokens: 6000,
-      abortSignal: AbortSignal.timeout(120_000),
+      abortSignal: AbortSignal.timeout(300_000),
     });
 
     try {

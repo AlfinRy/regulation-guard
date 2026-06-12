@@ -175,7 +175,7 @@ Legal cross-check findings:
 ${JSON.stringify(legalFindings, null, 2)}
 ${metadataContext}`,
     maxTokens: 8000,
-    abortSignal: AbortSignal.timeout(180_000),
+    abortSignal: AbortSignal.timeout(300_000),
   });
 
   let report: ComplianceReport;
