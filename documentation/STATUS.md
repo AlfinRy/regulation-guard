@@ -39,7 +39,6 @@
 - [x] SSE streaming — Real-time pipeline events to frontend
 - [x] Validate-key endpoint — Test API key before starting review
 - [x] Error handling — User-friendly messages for 401, 429, 403, timeout, etc.
-- [x] Timeout protection — 2-minute timeout on all LLM calls
 
 #### Backend-Band
 - [x] FastAPI service with CORS
@@ -49,13 +48,72 @@
 - [x] Message passing — Typed messages with agent IDs
 - [x] SSE streaming — Forward Band events to Node.js
 
-### ❌ Yang Masih Perlu Dikerjakan
+---
+
+## 🔧 Agent Improvements (Applied)
+
+Semua improvement dari AGENTS_IMPROVEMENT.md dan KNOWLEDGE_INJECTION.md sudah diimplementasikan:
+
+### Cross-Cutting Utilities
+- [x] **Shared JSON Parser** (`src/lib/parseJSON.ts`) — `parseJSONArray()` & `parseJSONObject()` — robust parsing yang mencari `[`/`]` atau `{`/`}` pertama/terakhir
+- [x] **Token Estimator** (`src/lib/tokenEstimate.ts`) — estimasi token + warning jika prompt melebihi threshold
+- [x] **Knowledge Loader** (`src/lib/knowledgeLoader.ts`) — lightweight RAG dari `/knowledge/*.md` files dengan section aliases
+
+### Agent 1 — Policy Reader (`policyReader.ts`)
+- [x] Parser robust — tidak crash pada non-JSON preamble
+- [x] Field `severity` dihapus (Agent 2 yang scoring)
+- [x] Category list diperluas (13 kategori: Payment, Liability, IP, Termination, Data, Subprocessor, Audit, Confidentiality, Security, Dispute, ForceMajeure, CrossBorderTransfer, DataRetention, Other)
+- [x] Chunking untuk dokumen >3000 kata
+- [x] Timeout: 120s (dari 300s)
+
+### Agent 2 — Risk Analyzer (`riskAnalyzer.ts`)
+- [x] Parser robust — shared utility
+- [x] Knowledge injection — load `risk_patterns` dari `/knowledge/*.md` berdasarkan regulasi yang dipilih
+- [x] Missing clause ID validation — auto-fill missing IDs sebagai LOW
+- [x] `regulations` parameter diterima untuk knowledge injection
+- [x] Timeout: 120s (dari 300s)
+
+### Agent 3 — Legal Cross-Checker (`legalChecker.ts`)
+- [x] Semua scored clauses (HIGH+MEDIUM+LOW) dikirim ke model
+- [x] Missed findings → WARNING + humanReview: true
+- [x] Knowledge injection — load `articles`, `incident_reporting`, `data_localization`, `retention`, `cross_border` dari knowledge files
+- [x] Batching — 8 clauses per batch, parallel processing
+- [x] Retry — 1x retry dengan repair prompt saat JSON parse gagal
+- [x] riskFactors dari Agent 2 di-forward ke Agent 3
+- [x] Timeout: 300s (unchanged, complex task)
+
+### Agent 4 — Compliance Reporter (`reporter.ts`)
+- [x] Reasoning verbatim — preserve Agent 3 reasoning, tidak di-summarize
+- [x] Severity standardized ke `HIGH` (bukan `CRITICAL`) — konsisten dengan Agent 2
+- [x] `tryRepairJSON` yang clean — truncate at last complete finding object (bukan O(n) loop)
+- [x] `metadata` field — sessionId, documentName, regulations, provider, model, generatedAt
+- [x] `reportToMarkdown()` utility — export report ke Markdown string
+- [x] Timeout: 180s (dari 300s)
+
+### Severity Standardization (Frontend + Backend)
+- [x] Backend: `severity: 'HIGH' | 'MEDIUM' | 'LOW'` di semua interface
+- [x] Frontend: Semua `CRITICAL` → `HIGH` di `api.ts`, `export.ts`, `ResultsPage.tsx`
+- [x] `tsc --noEmit` sukses tanpa error di kedua project
+
+### Knowledge Base (`/knowledge/`)
+- [x] `ojk.md` — 5 sections: risk_patterns, articles, incident_reporting, data_localization, retention
+- [x] `gdpr.md` — 5 sections: risk_patterns, articles, breach_notification, cross_border, retention
+- [x] `pdpa.md` — 3 sections: risk_patterns, articles, cross_border
+- [x] `iso27001.md` — 3 sections: risk_patterns, controls, security_assessment
+- [x] Section aliases di knowledgeLoader (ISO27001 `articles` → `controls`)
+
+### Route Handler (`review.ts`)
+- [x] `regulations` diteruskan ke `runRiskAnalyzer()`
+- [x] `ReporterMetadata` diteruskan ke `runReporter()`
+
+---
+
+## ❌ Yang Masih Perlu Dikerjakan
 
 - [ ] **E2E testing** dengan berbagai provider (DeepSeek, Groq, OpenAI)
 - [ ] **Demo video** (3-5 menit)
 - [ ] **Slide deck** (8-10 slides)
 - [ ] **Deploy** — Vercel (frontend), Railway/Render (backends)
-- [ ] **Supabase** — Storage untuk dokumen, Postgres untuk audit logs (opsional)
 
 ---
 
