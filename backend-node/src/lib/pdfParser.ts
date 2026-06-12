@@ -2,19 +2,13 @@
  * PDF and DOCX parsing utilities.
  * Extracts plain text from uploaded documents.
  *
- * Uses pdfjs-dist (edge/Workers-compatible) instead of pdf-parse.
- * Works on both Node.js and Cloudflare Workers (with nodejs_compat).
+ * Uses unpdf (edge/Workers-compatible, no worker needed).
+ * Works on both Node.js and Cloudflare Workers.
  */
 
 import path from 'node:path';
+import { extractText } from 'unpdf';
 import mammoth from 'mammoth';
-
-// pdfjs-dist setup — disable worker for serverless/edge environments
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-
-// Set dummy worker source to suppress "No GlobalWorkerOptions.workerSrc" error.
-// We don't use Web Workers — PDF parsing runs on the main thread.
-pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 /**
  * Parse a file buffer based on its extension.
@@ -27,7 +21,6 @@ export async function parseDocument(
 ): Promise<string> {
   const ext = path.extname(filename).toLowerCase();
 
-  // Ensure we have a Uint8Array for pdfjs
   const uint8 = buffer instanceof ArrayBuffer
     ? new Uint8Array(buffer)
     : new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
@@ -44,22 +37,9 @@ export async function parseDocument(
 }
 
 async function parsePdf(data: Uint8Array): Promise<string> {
-  const doc = await pdfjsLib.getDocument({ data, useSystemFonts: true }).promise;
-  const pages: string[] = [];
-
-  for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i);
-    const content = await page.getTextContent();
-    const text = content.items
-      .filter((item): item is typeof item & { str: string } => 'str' in item)
-      .map((item) => item.str)
-      .join(' ');
-    pages.push(text);
-    page.cleanup();
-  }
-
-  doc.destroy();
-  return pages.join('\n\n');
+  const { totalPages, text } = await extractText(data);
+  console.log(`[PDF Parser] Extracted text from ${totalPages} pages`);
+  return text.join('\n\n');
 }
 
 async function parseDocx(buffer: Buffer): Promise<string> {
