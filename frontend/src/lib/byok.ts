@@ -16,8 +16,8 @@ export const PROVIDERS: ProviderConfig[] = [
     logo: '🟠',
     icon: 'anthropic.svg',
     baseUrl: 'https://api.anthropic.com',
-    defaultModel: 'claude-3-5-sonnet-20241022',
-    modelHint: 'claude-3-5-sonnet-20241022, claude-3-haiku-20240307',
+    defaultModel: 'claude-3-5-sonnet-latest',
+    modelHint: 'claude-3-5-sonnet-latest',
     docsUrl: 'https://docs.anthropic.com/en/docs/about-claude/models',
   },
   {
@@ -47,7 +47,7 @@ export const PROVIDERS: ProviderConfig[] = [
     icon: 'openrouter.svg',
     baseUrl: 'https://openrouter.ai/api/v1',
     defaultModel: 'openai/gpt-4o',
-    modelHint: 'openai/gpt-4o, anthropic/claude-3.5-sonnet, google/gemini-2.0-flash',
+    modelHint: 'openai/gpt-4o, google/gemini-2.5-flash',
     docsUrl: 'https://openrouter.ai/models',
   },
   {
@@ -56,8 +56,8 @@ export const PROVIDERS: ProviderConfig[] = [
     logo: '🦙',
     icon: 'ollama.svg',
     baseUrl: 'https://ollama.com/api',
-    defaultModel: 'llama3',
-    modelHint: 'llama3, mistral, codellama',
+    defaultModel: 'llama3.1',
+    modelHint: 'llama3.1, llama3.3',
     docsUrl: 'https://ollama.com/library',
   },
   {
@@ -67,7 +67,7 @@ export const PROVIDERS: ProviderConfig[] = [
     icon: 'groq.svg',
     baseUrl: 'https://api.groq.com/openai/v1',
     defaultModel: 'llama-3.3-70b-versatile',
-    modelHint: 'llama-3.3-70b-versatile, mixtral-8x7b-32768',
+    modelHint: 'llama-3.3-70b-versatile',
     docsUrl: 'https://console.groq.com/docs/models',
   },
   {
@@ -77,7 +77,7 @@ export const PROVIDERS: ProviderConfig[] = [
     icon: 'mistral.svg',
     baseUrl: 'https://api.mistral.ai/v1',
     defaultModel: 'mistral-large-latest',
-    modelHint: 'mistral-large-latest, codestral-latest',
+    modelHint: 'mistral-large-latest',
     docsUrl: 'https://docs.mistral.ai/getting-started/models/',
   },
   {
@@ -86,8 +86,8 @@ export const PROVIDERS: ProviderConfig[] = [
     logo: '🤝',
     icon: 'togetherai.svg',
     baseUrl: 'https://api.together.xyz/v1',
-    defaultModel: 'meta-llama/Llama-3-70b-chat-hf',
-    modelHint: 'meta-llama/Llama-3-70b-chat-hf, mistralai/Mixtral-8x7B-Instruct-v0.1',
+    defaultModel: 'meta-llama/Llama-3.3-70b-instruct',
+    modelHint: 'meta-llama/Llama-3.3-70b-instruct',
     docsUrl: 'https://docs.together.ai/docs/inference-models',
   },
   {
@@ -96,8 +96,8 @@ export const PROVIDERS: ProviderConfig[] = [
     logo: '🎆',
     icon: 'fireworks.svg',
     baseUrl: 'https://api.fireworks.ai/inference/v1',
-    defaultModel: 'accounts/fireworks/models/llama-v3p1-70b-instruct',
-    modelHint: 'accounts/fireworks/models/llama-v3p1-70b-instruct',
+    defaultModel: 'accounts/fireworks/models/llama-v3p3-70b-instruct',
+    modelHint: 'accounts/fireworks/models/llama-v3p3-70b-instruct',
     docsUrl: 'https://docs.fireworks.ai/',
   },
   {
@@ -106,8 +106,8 @@ export const PROVIDERS: ProviderConfig[] = [
     logo: '💎',
     icon: 'gemini.svg',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    defaultModel: 'gemini-1.5-flash',
-    modelHint: 'gemini-1.5-flash, gemini-1.5-pro',
+    defaultModel: 'gemini-2.5-flash',
+    modelHint: 'gemini-2.5-flash',
     docsUrl: 'https://ai.google.dev/gemini-api/docs/models/gemini',
   },
   {
@@ -117,7 +117,7 @@ export const PROVIDERS: ProviderConfig[] = [
     icon: 'xai.svg',
     baseUrl: 'https://api.x.ai/v1',
     defaultModel: 'grok-2',
-    modelHint: 'grok-2, grok-2-mini',
+    modelHint: 'grok-2, grok-3',
     docsUrl: 'https://docs.x.ai/docs/',
   },
   {
@@ -126,8 +126,8 @@ export const PROVIDERS: ProviderConfig[] = [
     logo: '🔮',
     icon: 'zai.svg',
     baseUrl: 'https://api.z.ai/api/paas/v4',
-    defaultModel: 'glm-4',
-    modelHint: 'glm-4, glm-4-flash',
+    defaultModel: 'glm-4-plus',
+    modelHint: 'glm-4-plus, glm-4v-plus',
     docsUrl: 'https://open.bigmodel.cn/dev/howuse/model',
   },
   {
