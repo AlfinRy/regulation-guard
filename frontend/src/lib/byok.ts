@@ -143,9 +143,23 @@ export const PROVIDERS: ProviderConfig[] = [
 ];
 
 // --- localStorage keys ---
+// Global slots hold the *active* provider's values (used by api.ts / UploadPage).
+// Per-provider maps keep a history so switching back to a provider restores
+// the model id + api key previously saved for it.
 const LS_KEY_API_KEY = 'rg_api_key';
 const LS_KEY_PROVIDER = 'rg_provider_id';
 const LS_KEY_MODEL = 'rg_model_name';
+const LS_KEY_MODELS = 'rg_models'; // JSON map: providerId -> modelName
+const LS_KEY_KEYS = 'rg_api_keys'; // JSON map: providerId -> apiKey
+
+function readJsonMap(key: string): Record<string, string> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
 
 export function getStoredProviderId(): string | null {
   return localStorage.getItem(LS_KEY_PROVIDER);
@@ -159,6 +173,28 @@ export function getStoredModelName(): string | null {
   return localStorage.getItem(LS_KEY_MODEL);
 }
 
+/**
+ * Returns the model id last saved for a given provider.
+ * Falls back to the global slot for backward-compat with the active provider.
+ */
+export function getStoredModelForProvider(providerId: string): string | null {
+  const map = readJsonMap(LS_KEY_MODELS);
+  if (map[providerId]) return map[providerId];
+  if (providerId === getStoredProviderId()) return getStoredModelName();
+  return null;
+}
+
+/**
+ * Returns the api key last saved for a given provider.
+ * Falls back to the global slot for backward-compat with the active provider.
+ */
+export function getStoredKeyForProvider(providerId: string): string | null {
+  const map = readJsonMap(LS_KEY_KEYS);
+  if (map[providerId]) return map[providerId];
+  if (providerId === getStoredProviderId()) return getStoredApiKey();
+  return null;
+}
+
 export function getProviderConfig(id: string): ProviderConfig | undefined {
   return PROVIDERS.find(p => p.id === id);
 }
@@ -169,15 +205,27 @@ export function getCurrentProvider(): ProviderConfig | undefined {
 }
 
 export function saveSettings(providerId: string, apiKey: string, modelName: string): void {
+  // Active (global) slots — consumed by api.ts / UploadPage.tsx
   localStorage.setItem(LS_KEY_PROVIDER, providerId);
   localStorage.setItem(LS_KEY_API_KEY, apiKey);
   localStorage.setItem(LS_KEY_MODEL, modelName);
+
+  // Per-provider history
+  const models = readJsonMap(LS_KEY_MODELS);
+  models[providerId] = modelName;
+  localStorage.setItem(LS_KEY_MODELS, JSON.stringify(models));
+
+  const keys = readJsonMap(LS_KEY_KEYS);
+  keys[providerId] = apiKey;
+  localStorage.setItem(LS_KEY_KEYS, JSON.stringify(keys));
 }
 
 export function clearSettings(): void {
   localStorage.removeItem(LS_KEY_PROVIDER);
   localStorage.removeItem(LS_KEY_API_KEY);
   localStorage.removeItem(LS_KEY_MODEL);
+  localStorage.removeItem(LS_KEY_MODELS);
+  localStorage.removeItem(LS_KEY_KEYS);
 }
 
 export function hasSettings(): boolean {

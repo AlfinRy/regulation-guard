@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   PROVIDERS,
   getStoredProviderId,
-  getStoredApiKey,
-  getStoredModelName,
+  getStoredModelForProvider,
+  getStoredKeyForProvider,
   saveSettings,
   clearSettings,
   getProviderConfig,
@@ -20,27 +20,27 @@ type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 export default function SettingsPage() {
   const navigate = useNavigate();
 
-  // Load stored values on mount
+  // Load stored values on mount (per-provider, with global fallback)
   const [providerId, setProviderId] = useState<string>(getStoredProviderId() || 'deepseek');
-  const [apiKey, setApiKey] = useState<string>(getStoredApiKey() || '');
-  const [modelName, setModelName] = useState<string>(getStoredModelName() || '');
+  const [apiKey, setApiKey] = useState<string>(getStoredKeyForProvider(providerId) || '');
+  const [modelName, setModelName] = useState<string>(getStoredModelForProvider(providerId) || '');
   const [showKey, setShowKey] = useState(false);
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
   const [testError, setTestError] = useState('');
 
   const provider = getProviderConfig(providerId);
 
-  // Auto-fill model name when provider changes
+  // When the provider changes, restore the model id + api key previously
+  // saved for that provider (falling back to the provider's default model).
   useEffect(() => {
     const config = getProviderConfig(providerId);
-    if (config) {
-      const stored = getStoredModelName();
-      const storedProvider = getStoredProviderId();
-      // Only auto-fill if provider actually changed (not initial load)
-      if (storedProvider !== providerId || !stored) {
-        setModelName(config.defaultModel);
-      }
-    }
+    if (!config) return;
+    const savedModel = getStoredModelForProvider(providerId);
+    const savedKey = getStoredKeyForProvider(providerId);
+    setModelName(savedModel ?? config.defaultModel);
+    setApiKey(savedKey ?? '');
+    setTestStatus('idle');
+    setTestError('');
   }, [providerId]);
 
   const handleTest = async () => {
